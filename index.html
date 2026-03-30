@@ -883,13 +883,17 @@
     }
 
     const resolvedApiBaseUrl = (() => {
-        const configuredUrl = normalizeConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl ?? '');
+        const rawConfiguredValue = String(runtimeConfig.apiBaseUrl ?? '').trim();
+        const useSameOriginBackend = /^(same-origin|auto)$/i.test(rawConfiguredValue);
+        const configuredUrl = useSameOriginBackend
+            ? ''
+            : normalizeConfiguredApiBaseUrl(rawConfiguredValue);
 
         if (configuredUrl) {
             return configuredUrl;
         }
 
-        if (/^https?:$/i.test(location.protocol) && !isEmbeddedLocalOrigin()) {
+        if (useSameOriginBackend && /^https?:$/i.test(location.protocol) && !isEmbeddedLocalOrigin()) {
             return `${location.origin.replace(/\/+$/, '')}/api`;
         }
 

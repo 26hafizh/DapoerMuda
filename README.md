@@ -30,14 +30,17 @@ Server akan:
 Owner aplikasi cukup mengatur sekali saat deploy:
 
 - `DAPOERMUDA_API_BASE_URL`
-  Dipakai saat build asset web atau APK jika backend berada di domain lain, misalnya `https://domain-anda.com` atau `https://domain-anda.com/api`
+  Dipakai saat build asset web atau APK.
+  Gunakan `same-origin` jika web dan API ada di domain yang sama.
+  Gunakan `https://domain-anda.com` jika backend ada di domain lain.
 - Environment variable opsional:
   `HOST`, `PORT`, `DATA_FILE`, `CORS_ORIGIN`, `SESSION_TTL_MS`
   `DAPOERMUDA_API_BASE_URL`, `DAPOERMUDA_REQUEST_TIMEOUT_MS`
   `ADMIN_LOGIN`, `ADMIN_PASSWORD`, `ADMIN_DISPLAY_NAME`
   `CASHIER_LOGIN`, `CASHIER_PASSWORD`, `CASHIER_DISPLAY_NAME`
 
-Jika aplikasi dibuka dari origin backend yang sama, web akan otomatis memakai `/api` tanpa perlu isi manual.
+Secara default jika nilainya kosong, aplikasi berjalan di mode lokal/demo.
+Backend hanya aktif jika Anda mengisi `same-origin` atau URL backend publik yang benar.
 
 ## Deploy Railway
 
