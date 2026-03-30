@@ -4,11 +4,16 @@
   "private": true,
   "description": "Android wrapper and PWA setup for DapoerMuda POS.",
   "scripts": {
-    "build:web": "node scripts/sync-web.mjs",
+    "prepare:config": "node scripts/write-app-config.mjs",
+    "build:web": "npm run prepare:config && node scripts/sync-web.mjs",
     "start": "npm run build:web && node server/index.mjs",
     "start:api": "node server/index.mjs",
     "cap:sync": "npm run build:web && npx cap sync android",
-    "cap:open": "npx cap open android"
+    "cap:open": "npx cap open android",
+    "android:debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

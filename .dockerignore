@@ -1,0 +1,11 @@
+.git
+.github
+.gradle-user
+android
+chrome-headless-profile
+node_modules
+test-results
+www
+server/data/*.db
+server/data/*-wal
+server/data/*-shm

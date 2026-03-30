@@ -8,8 +8,10 @@ android/.gradle/
 android/.idea/
 android/local.properties
 android/app/build/
+android/app/debug.keystore
 android/build/
 android/capacitor-cordova-android-plugins/
+.android-user/
 server/data/*.db
 server/data/*-wal
 server/data/*-shm
