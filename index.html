@@ -386,6 +386,27 @@
         .admin-note { margin-top: 14px; font-size: 12px; line-height: 1.6; display: flex; gap: 8px; padding: 12px 13px; border-radius: 14px; border: 1px solid rgba(97, 76, 62, 0.1); }
         .admin-note-warning { color: #8b6140; background: rgba(247, 240, 230, 0.92); }
         .admin-note-muted { color: var(--text-light); background: rgba(255,255,255,0.52); }
+        .sync-status { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 15px; border-radius: 18px; background: rgba(255,255,255,0.6); border: 1px solid rgba(97, 76, 62, 0.1); margin-bottom: 16px; }
+        .sync-status strong { display: block; font-size: 14px; color: var(--text); margin-bottom: 4px; }
+        .sync-status span { font-size: 12px; line-height: 1.6; color: var(--text-light); }
+        .sync-status-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 88px; padding: 6px 10px; border-radius: 999px; background: rgba(98, 122, 92, 0.14); color: var(--success-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+        .sync-status-badge.is-warning { background: rgba(200, 151, 73, 0.14); color: #8b6140; }
+        .sync-status-badge.is-error { background: rgba(177, 103, 91, 0.14); color: #8f5046; }
+        .sync-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .sync-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 2px; }
+        .sync-actions .btn { min-height: 50px; font-size: 13px; }
+        .sync-actions .btn i { font-size: 14px; }
+        .sync-helper { margin-top: 14px; }
+        .activity-panel { background: linear-gradient(180deg, rgba(251,244,236,0.98), rgba(241,231,219,0.94)); border-radius: 24px; padding: 18px; border: 2px solid var(--paper-border); box-shadow: 0 12px 24px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
+        .activity-panel::before { content: ""; position: absolute; inset: 0 auto auto 0; width: 100%; height: 5px; background: linear-gradient(90deg, var(--success), var(--accent-gold), transparent); }
+        .activity-feed { display: grid; gap: 12px; }
+        .activity-card { display: flex; gap: 12px; padding: 13px; border-radius: 18px; background: rgba(255,255,255,0.58); border: 1px solid rgba(97, 76, 62, 0.1); }
+        .activity-icon { width: 42px; height: 42px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(98, 122, 92, 0.14); color: var(--success-dark); }
+        .activity-copy { min-width: 0; flex: 1; }
+        .activity-title { display: block; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+        .activity-detail { display: block; font-size: 12px; line-height: 1.6; color: var(--text-light); }
+        .activity-meta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--text-light); }
+        .activity-meta span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,0.55); border: 1px solid rgba(97, 76, 62, 0.08); }
 
         .form-control { width: 100%; padding: 15px 16px; margin-bottom: 15px; border: 2px solid rgba(210, 85, 63, 0.12); border-radius: 16px; font-size: 15px; outline: none; background: rgba(255,255,255,0.68); box-shadow: inset 0 1px 0 rgba(255,255,255,0.75); }
         .form-control:focus { border-color: rgba(210, 85, 63, 0.34); background: rgba(255,255,255,0.92); box-shadow: 0 0 0 6px rgba(210, 85, 63, 0.08); }
@@ -468,6 +489,15 @@
             .history-summary-overview,
             .history-recap-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .sync-grid,
+            .sync-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .sync-status {
+                flex-direction: column;
             }
         }
 
@@ -738,7 +768,58 @@
                 <div class="section-row">
                     <h3 class="section-title">Riwayat Transaksi</h3>
                 </div>
+                <div id="sync-card" class="admin-card hidden">
+                    <div class="admin-card-head">
+                        <div class="admin-card-title">
+                            <i class="fas fa-cloud-arrow-up"></i>
+                            <span>Sinkronisasi Antar Device</span>
+                        </div>
+                        <p class="admin-card-desc">Hubungkan aplikasi ke repo GitHub agar stok, transaksi, dan aktivitas yang dilakukan di tiap device bisa tetap sama saat dibuka dari mana saja.</p>
+                    </div>
+
+                    <div class="sync-status">
+                        <div>
+                            <strong id="sync-status-title">Belum aktif</strong>
+                            <span id="sync-status-text">Data masih tersimpan lokal di device ini.</span>
+                        </div>
+                        <span id="sync-status-badge" class="sync-status-badge is-warning">Lokal</span>
+                    </div>
+
+                    <div class="sync-grid">
+                        <div>
+                            <label for="sync-owner" class="form-label">Owner GitHub</label>
+                            <input type="text" id="sync-owner" class="form-control" placeholder="contoh: 26hafizh">
+                        </div>
+                        <div>
+                            <label for="sync-repo" class="form-label">Nama repo</label>
+                            <input type="text" id="sync-repo" class="form-control" placeholder="contoh: DapoerMuda">
+                        </div>
+                        <div>
+                            <label for="sync-branch" class="form-label">Branch</label>
+                            <input type="text" id="sync-branch" class="form-control" placeholder="main">
+                        </div>
+                        <div>
+                            <label for="sync-path" class="form-label">Path file data</label>
+                            <input type="text" id="sync-path" class="form-control" placeholder="data/dapoermuda-shared.json">
+                        </div>
+                    </div>
+
+                    <label for="sync-token" class="form-label">GitHub token</label>
+                    <input type="password" id="sync-token" class="form-control" placeholder="Fine-grained token dengan akses Contents: write">
+
+                    <div class="sync-actions">
+                        <button class="btn btn-primary" type="button" onclick="saveSyncSettings()"><i class="fas fa-floppy-disk"></i> Simpan</button>
+                        <button class="btn btn-success" type="button" onclick="syncNow()"><i class="fas fa-arrows-rotate"></i> Sinkronkan</button>
+                        <button class="btn btn-danger" type="button" onclick="pullSharedData()"><i class="fas fa-cloud-arrow-down"></i> Tarik Cloud</button>
+                    </div>
+
+                    <div class="admin-note admin-note-muted sync-helper">
+                        <i class="fas fa-shield-halved" style="margin-top: 2px;"></i>
+                        <span>Pakai personal access token GitHub khusus repo ini saja. Izin yang dibutuhkan cukup <strong>Contents: read and write</strong>.</span>
+                    </div>
+                </div>
                 <div id="history-summary" class="history-summary"></div>
+                <div id="activity-log"></div>
                 <div id="history-list"></div>
             </div>
 
@@ -770,7 +851,12 @@
 
     const storageKeys = {
         products: 'warung_products',
-        history: 'warung_history'
+        history: 'warung_history',
+        activities: 'warung_activities',
+        syncConfig: 'warung_sync_config',
+        syncPending: 'warung_sync_pending',
+        syncMeta: 'warung_sync_meta',
+        deviceId: 'warung_device_id'
     };
 
     const defaultProducts = [
@@ -780,18 +866,44 @@
         { id: 4, name: "Telur 1kg", price: 28000, stock: 15 }
     ];
 
-    function safeParseStorage(key, fallback) {
+    const defaultSyncConfig = {
+        enabled: false,
+        owner: '26hafizh',
+        repo: 'DapoerMuda',
+        branch: 'main',
+        path: 'data/dapoermuda-shared.json',
+        token: ''
+    };
+
+    const defaultSyncMeta = {
+        lastSyncedAt: '',
+        lastError: '',
+        lastStatus: 'Lokal saja',
+        lastSource: 'local'
+    };
+
+    const cloudSchemaVersion = 1;
+    const syncState = {
+        inProgress: false,
+        queued: false
+    };
+
+    function safeParseJSON(key, fallback) {
         try {
             const rawValue = localStorage.getItem(key);
             if (!rawValue) return fallback;
 
-            const parsedValue = JSON.parse(rawValue);
-            return Array.isArray(parsedValue) ? parsedValue : fallback;
+            return JSON.parse(rawValue);
         } catch (error) {
             console.warn(`Data ${key} tidak valid dan dikembalikan ke default.`, error);
             localStorage.removeItem(key);
             return fallback;
         }
+    }
+
+    function safeParseStorage(key, fallback) {
+        const parsedValue = safeParseJSON(key, fallback);
+        return Array.isArray(parsedValue) ? parsedValue : fallback;
     }
 
     function normalizeProducts(items) {
@@ -1041,6 +1153,100 @@
             .filter((trx) => trx.items.length > 0);
     }
 
+    function normalizeActivities(items) {
+        if (!Array.isArray(items)) return [];
+
+        return items
+            .map((activity, index) => {
+                const createdAt = parseTransactionDateInput(activity.createdAt) || new Date();
+
+                return {
+                    id: String(activity.id ?? `activity_${index + 1}`),
+                    type: String(activity.type ?? 'info'),
+                    title: String(activity.title ?? 'Aktivitas'),
+                    detail: String(activity.detail ?? '').trim(),
+                    actor: String(activity.actor ?? 'Sistem'),
+                    createdAt: createdAt.toISOString(),
+                    deviceId: String(activity.deviceId ?? '')
+                };
+            })
+            .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+    }
+
+    function normalizePendingOperations(items) {
+        if (!Array.isArray(items)) return [];
+
+        return items
+            .map((operation, index) => ({
+                id: String(operation.id ?? `op_${index + 1}`),
+                type: String(operation.type ?? 'info'),
+                createdAt: parseTransactionDateInput(operation.createdAt)?.toISOString() || new Date().toISOString(),
+                actor: String(operation.actor ?? 'Sistem'),
+                deviceId: String(operation.deviceId ?? ''),
+                payload: operation.payload && typeof operation.payload === 'object' ? operation.payload : {}
+            }))
+            .sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt));
+    }
+
+    function normalizeSyncPath(value) {
+        return String(value ?? defaultSyncConfig.path)
+            .trim()
+            .replace(/^\/+|\/+$/g, '') || defaultSyncConfig.path;
+    }
+
+    function normalizeSyncConfig(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+        return {
+            enabled: Boolean(source.enabled),
+            owner: String(source.owner ?? defaultSyncConfig.owner).trim() || defaultSyncConfig.owner,
+            repo: String(source.repo ?? defaultSyncConfig.repo).trim() || defaultSyncConfig.repo,
+            branch: String(source.branch ?? defaultSyncConfig.branch).trim() || defaultSyncConfig.branch,
+            path: normalizeSyncPath(source.path ?? defaultSyncConfig.path),
+            token: String(source.token ?? '').trim()
+        };
+    }
+
+    function normalizeSyncMeta(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+        return {
+            lastSyncedAt: String(source.lastSyncedAt ?? ''),
+            lastError: String(source.lastError ?? ''),
+            lastStatus: String(source.lastStatus ?? defaultSyncMeta.lastStatus),
+            lastSource: String(source.lastSource ?? defaultSyncMeta.lastSource)
+        };
+    }
+
+    function normalizeCloudStore(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+        return {
+            schemaVersion: Number(source.schemaVersion) || cloudSchemaVersion,
+            products: normalizeProducts(source.products ?? defaultProducts),
+            transactions: normalizeTransactions(source.transactions ?? []),
+            activities: normalizeActivities(source.activities ?? []),
+            updatedAt: String(source.updatedAt ?? ''),
+            updatedBy: String(source.updatedBy ?? ''),
+            deviceId: String(source.deviceId ?? '')
+        };
+    }
+
+    function cloneData(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function getOrCreateDeviceId() {
+        const existingValue = localStorage.getItem(storageKeys.deviceId);
+        if (existingValue) return existingValue;
+
+        const nextValue = `DV-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+        localStorage.setItem(storageKeys.deviceId, nextValue);
+        return nextValue;
+    }
+
+    const deviceId = getOrCreateDeviceId();
+
     const formatRp = (angka) => new Intl.NumberFormat('id-ID').format(Math.max(0, Number(angka) || 0));
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
         '&': '&amp;',
@@ -1073,6 +1279,10 @@
 
     let products = normalizeProducts(safeParseStorage(storageKeys.products, defaultProducts));
     let transactions = normalizeTransactions(safeParseStorage(storageKeys.history, []));
+    let activities = normalizeActivities(safeParseStorage(storageKeys.activities, []));
+    let syncConfig = normalizeSyncConfig(safeParseJSON(storageKeys.syncConfig, defaultSyncConfig));
+    let syncPending = normalizePendingOperations(safeParseStorage(storageKeys.syncPending, []));
+    let syncMeta = normalizeSyncMeta(safeParseJSON(storageKeys.syncMeta, defaultSyncMeta));
 
     document.addEventListener('DOMContentLoaded', () => {
         const userInput = document.getElementById('login-user');
@@ -1105,7 +1315,7 @@
 
         updateInstallButtonVisibility();
         registerServiceWorker();
-        refreshAllViews();
+        void bootstrapApp();
     });
 
     window.addEventListener('beforeinstallprompt', (event) => {
@@ -1149,6 +1359,623 @@
         }, { once: true });
     }
 
+    function persistLocalState() {
+        localStorage.setItem(storageKeys.products, JSON.stringify(products));
+        localStorage.setItem(storageKeys.history, JSON.stringify(transactions));
+        localStorage.setItem(storageKeys.activities, JSON.stringify(activities));
+        localStorage.setItem(storageKeys.syncConfig, JSON.stringify(syncConfig));
+        localStorage.setItem(storageKeys.syncPending, JSON.stringify(syncPending));
+        localStorage.setItem(storageKeys.syncMeta, JSON.stringify(syncMeta));
+    }
+
+    function createNumericId() {
+        return Number(`${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`);
+    }
+
+    function createMutationId(prefix = 'OP') {
+        return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}-${deviceId.slice(-4)}`;
+    }
+
+    function createTransactionId() {
+        return `TRX-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    }
+
+    function createActivityFromOperation(operation) {
+        if (!operation) return null;
+
+        if (operation.type === 'add_product') {
+            const product = operation.payload.product ?? {};
+            return {
+                id: operation.id,
+                type: 'add_product',
+                title: `Produk baru ${product.name ?? 'Produk'} ditambahkan`,
+                detail: `Stok awal ${product.stock ?? 0} pcs dengan harga Rp ${formatRp(product.price ?? 0)}.`,
+                actor: operation.actor,
+                createdAt: operation.createdAt,
+                deviceId: operation.deviceId
+            };
+        }
+
+        if (operation.type === 'restock_product') {
+            return {
+                id: operation.id,
+                type: 'restock_product',
+                title: `Restok ${operation.payload.productName ?? 'produk'}`,
+                detail: `Tambah ${operation.payload.qty ?? 0} pcs${operation.payload.newPrice !== null && operation.payload.newPrice !== undefined ? ` dan harga baru Rp ${formatRp(operation.payload.newPrice)}` : ''}.`,
+                actor: operation.actor,
+                createdAt: operation.createdAt,
+                deviceId: operation.deviceId
+            };
+        }
+
+        if (operation.type === 'checkout') {
+            const transaction = operation.payload.transaction ?? {};
+            return {
+                id: operation.id,
+                type: 'checkout',
+                title: `Checkout ${transaction.id ?? 'transaksi'}`,
+                detail: `Total Rp ${formatRp(transaction.total ?? 0)} dengan ${getTransactionItemCount(transaction)} item berhasil disimpan.`,
+                actor: operation.actor,
+                createdAt: operation.createdAt,
+                deviceId: operation.deviceId
+            };
+        }
+
+        return {
+            id: operation.id,
+            type: operation.type,
+            title: 'Aktivitas baru',
+            detail: 'Perubahan baru berhasil disimpan.',
+            actor: operation.actor,
+            createdAt: operation.createdAt,
+            deviceId: operation.deviceId
+        };
+    }
+
+    function upsertActivity(activity) {
+        if (!activity) return;
+
+        const nextItems = [activity, ...activities.filter((item) => item.id !== activity.id)];
+        activities = normalizeActivities(nextItems);
+    }
+
+    function queueOperation(type, payload) {
+        const operation = {
+            id: createMutationId(type),
+            type,
+            createdAt: new Date().toISOString(),
+            actor: currentUser?.username || 'Sistem',
+            deviceId,
+            payload
+        };
+
+        syncPending = normalizePendingOperations([...syncPending, operation]);
+        upsertActivity(createActivityFromOperation(operation));
+        return operation;
+    }
+
+    function reconcileCartWithProducts() {
+        cart = cart
+            .map((item) => {
+                const product = products.find((prod) => prod.id === item.id);
+                if (!product || product.stock <= 0) return null;
+
+                return {
+                    ...item,
+                    name: product.name,
+                    price: product.price,
+                    qty: Math.min(item.qty, product.stock)
+                };
+            })
+            .filter((item) => item && item.qty > 0);
+    }
+
+    function getLocalCloudStore() {
+        return normalizeCloudStore({
+            schemaVersion: cloudSchemaVersion,
+            products,
+            transactions,
+            activities,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentUser?.username || 'Sistem',
+            deviceId
+        });
+    }
+
+    function replaceLocalStateFromStore(store) {
+        const normalizedStore = normalizeCloudStore(store);
+        products = normalizedStore.products;
+        transactions = normalizedStore.transactions;
+        activities = normalizedStore.activities;
+        reconcileCartWithProducts();
+        refreshAllViews();
+    }
+
+    function getActivityIcon(type) {
+        if (type === 'checkout') return 'fa-receipt';
+        if (type === 'restock_product') return 'fa-truck-loading';
+        if (type === 'add_product') return 'fa-box-open';
+        return 'fa-clock-rotate-left';
+    }
+
+    function mergeLocalSnapshotIntoStore(store) {
+        const nextStore = normalizeCloudStore(store);
+        const localSnapshot = getLocalCloudStore();
+        const pendingOperationIds = new Set(syncPending.map((operation) => operation.id));
+        const pendingTransactionIds = new Set(syncPending
+            .filter((operation) => operation.type === 'checkout')
+            .map((operation) => String(operation.payload.transaction?.id ?? '')));
+
+        localSnapshot.products.forEach((localProduct) => {
+            const exists = nextStore.products.some((remoteProduct) => remoteProduct.id === localProduct.id || remoteProduct.name.toLowerCase() === localProduct.name.toLowerCase());
+
+            if (!exists) {
+                nextStore.products.push(localProduct);
+            }
+        });
+
+        const remoteTransactionIds = new Set(nextStore.transactions.map((transaction) => transaction.id));
+        const localOnlyTransactions = localSnapshot.transactions.filter((transaction) => !remoteTransactionIds.has(transaction.id) && !pendingTransactionIds.has(transaction.id));
+        nextStore.transactions = normalizeTransactions([...localOnlyTransactions, ...nextStore.transactions]);
+
+        const remoteActivityIds = new Set(nextStore.activities.map((activity) => activity.id));
+        const localOnlyActivities = localSnapshot.activities.filter((activity) => !remoteActivityIds.has(activity.id) && !pendingOperationIds.has(activity.id));
+        nextStore.activities = normalizeActivities([...localOnlyActivities, ...nextStore.activities]);
+
+        return nextStore;
+    }
+
+    function saveData(options = {}) {
+        persistLocalState();
+
+        if (options.sync) {
+            void requestCloudSync({ silent: true });
+        }
+    }
+
+    function isSyncConfigured() {
+        return Boolean(
+            syncConfig.enabled
+            && syncConfig.owner
+            && syncConfig.repo
+            && syncConfig.branch
+            && syncConfig.path
+            && syncConfig.token
+        );
+    }
+
+    function canSyncNow() {
+        return navigator.onLine !== false;
+    }
+
+    function encodeGitHubPath(pathValue) {
+        return normalizeSyncPath(pathValue)
+            .split('/')
+            .map((segment) => encodeURIComponent(segment))
+            .join('/');
+    }
+
+    function buildGitHubHeaders() {
+        const headers = {
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+        };
+
+        if (syncConfig.token) {
+            headers.Authorization = `Bearer ${syncConfig.token}`;
+        }
+
+        return headers;
+    }
+
+    function encodeBase64Utf8(value) {
+        const bytes = new TextEncoder().encode(value);
+        let binary = '';
+        bytes.forEach((byte) => {
+            binary += String.fromCharCode(byte);
+        });
+        return btoa(binary);
+    }
+
+    function decodeBase64Utf8(value) {
+        const binary = atob(value);
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    async function fetchRemoteStore() {
+        const encodedPath = encodeGitHubPath(syncConfig.path);
+        const url = `https://api.github.com/repos/${encodeURIComponent(syncConfig.owner)}/${encodeURIComponent(syncConfig.repo)}/contents/${encodedPath}?ref=${encodeURIComponent(syncConfig.branch)}`;
+        const response = await fetch(url, {
+            headers: buildGitHubHeaders()
+        });
+
+        if (response.status === 404) {
+            return { exists: false, sha: '', store: null };
+        }
+
+        if (!response.ok) {
+            let message = `GitHub merespons ${response.status}.`;
+
+            try {
+                const errorData = await response.json();
+                message = errorData.message || message;
+            } catch (error) {
+                console.warn('Gagal membaca detail error GitHub.', error);
+            }
+
+            throw new Error(message);
+        }
+
+        const fileData = await response.json();
+        const content = decodeBase64Utf8(String(fileData.content ?? '').replace(/\n/g, ''));
+        return {
+            exists: true,
+            sha: String(fileData.sha ?? ''),
+            store: normalizeCloudStore(JSON.parse(content))
+        };
+    }
+
+    async function uploadRemoteStore(store, sha = '') {
+        const encodedPath = encodeGitHubPath(syncConfig.path);
+        const url = `https://api.github.com/repos/${encodeURIComponent(syncConfig.owner)}/${encodeURIComponent(syncConfig.repo)}/contents/${encodedPath}`;
+        const payload = {
+            message: `Sync DapoerMuda POS ${new Date().toISOString()}`,
+            branch: syncConfig.branch,
+            content: encodeBase64Utf8(JSON.stringify(normalizeCloudStore(store), null, 2))
+        };
+
+        if (sha) {
+            payload.sha = sha;
+        }
+
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                ...buildGitHubHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            let message = `Gagal menyimpan ke GitHub (${response.status}).`;
+
+            try {
+                const errorData = await response.json();
+                message = errorData.message || message;
+            } catch (error) {
+                console.warn('Gagal membaca detail error upload GitHub.', error);
+            }
+
+            throw new Error(message);
+        }
+
+        return response.json();
+    }
+
+    function applyOperationToState(store, operation) {
+        const nextStore = normalizeCloudStore(store);
+        const nextActivities = nextStore.activities.filter((activity) => activity.id !== operation.id);
+
+        if (operation.type === 'add_product') {
+            const incomingProduct = normalizeProducts([operation.payload.product ?? {}])[0];
+            const existingById = nextStore.products.find((product) => product.id === incomingProduct.id);
+            const existingByName = nextStore.products.find((product) => product.name.toLowerCase() === incomingProduct.name.toLowerCase());
+
+            if (existingById) {
+                existingById.name = incomingProduct.name;
+                existingById.price = incomingProduct.price;
+                existingById.stock = Math.max(existingById.stock, incomingProduct.stock);
+            } else if (existingByName) {
+                existingByName.stock += incomingProduct.stock;
+                existingByName.price = incomingProduct.price;
+            } else {
+                nextStore.products.push(incomingProduct);
+            }
+        }
+
+        if (operation.type === 'restock_product') {
+            const product = nextStore.products.find((item) => item.id === Number(operation.payload.productId));
+
+            if (product) {
+                product.stock += Math.max(0, Number(operation.payload.qty) || 0);
+
+                if (operation.payload.newPrice !== null && operation.payload.newPrice !== undefined) {
+                    product.price = Math.max(0, Number(operation.payload.newPrice) || 0);
+                }
+            }
+        }
+
+        if (operation.type === 'checkout') {
+            const transaction = normalizeTransactions([operation.payload.transaction ?? {}])[0];
+            const transactionExists = nextStore.transactions.some((item) => item.id === transaction.id);
+
+            if (!transactionExists) {
+                nextStore.transactions.unshift(transaction);
+
+                const items = Array.isArray(operation.payload.items) ? operation.payload.items : [];
+                items.forEach((item) => {
+                    const product = nextStore.products.find((entry) => entry.id === Number(item.id));
+
+                    if (product) {
+                        product.stock = Math.max(0, product.stock - (Number(item.qty) || 0));
+                    }
+                });
+            }
+        }
+
+        nextStore.activities = normalizeActivities([createActivityFromOperation(operation), ...nextActivities]);
+        nextStore.updatedAt = new Date().toISOString();
+        nextStore.updatedBy = operation.actor;
+        nextStore.deviceId = operation.deviceId;
+        return nextStore;
+    }
+
+    function populateSyncForm() {
+        const ownerInput = document.getElementById('sync-owner');
+        const repoInput = document.getElementById('sync-repo');
+        const branchInput = document.getElementById('sync-branch');
+        const pathInput = document.getElementById('sync-path');
+        const tokenInput = document.getElementById('sync-token');
+
+        if (!ownerInput || !repoInput || !branchInput || !pathInput || !tokenInput) return;
+
+        ownerInput.value = syncConfig.owner;
+        repoInput.value = syncConfig.repo;
+        branchInput.value = syncConfig.branch;
+        pathInput.value = syncConfig.path;
+        tokenInput.value = syncConfig.token;
+    }
+
+    function updateSyncPanel() {
+        const card = document.getElementById('sync-card');
+        const title = document.getElementById('sync-status-title');
+        const text = document.getElementById('sync-status-text');
+        const badge = document.getElementById('sync-status-badge');
+
+        if (!card || !title || !text || !badge) return;
+
+        card.classList.toggle('hidden', !isAdmin());
+        badge.classList.remove('is-warning', 'is-error');
+
+        if (syncState.inProgress) {
+            title.innerText = 'Sedang sinkronisasi';
+            text.innerText = 'Data sedang dicek dan disejajarkan dengan file cloud bersama.';
+            badge.innerText = 'Sync';
+            return;
+        }
+
+        if (!isSyncConfigured()) {
+            title.innerText = 'Belum aktif';
+            text.innerText = 'Data masih tersimpan lokal di device ini. Isi konfigurasi GitHub untuk mulai sinkron lintas device.';
+            badge.innerText = 'Lokal';
+            badge.classList.add('is-warning');
+            return;
+        }
+
+        if (syncMeta.lastError) {
+            title.innerText = 'Perlu perhatian';
+            text.innerText = syncMeta.lastError;
+            badge.innerText = 'Error';
+            badge.classList.add('is-error');
+            return;
+        }
+
+        const syncedAtText = syncMeta.lastSyncedAt
+            ? `Sinkron terakhir ${formatTransactionDisplayDate(syncMeta.lastSyncedAt)}.`
+            : 'Konfigurasi cloud sudah tersimpan.';
+
+        title.innerText = syncPending.length > 0 ? 'Ada perubahan lokal' : 'Cloud aktif';
+        text.innerText = syncPending.length > 0
+            ? `${syncPending.length} perubahan belum dikirim. Tekan Sinkronkan atau tunggu saat device online.`
+            : syncedAtText;
+        badge.innerText = syncPending.length > 0 ? 'Pending' : 'Cloud';
+
+        if (syncPending.length > 0) {
+            badge.classList.add('is-warning');
+        }
+    }
+
+    function renderActivityLog() {
+        const container = document.getElementById('activity-log');
+        if (!container) return;
+
+        const latestActivities = activities.slice(0, 10);
+        container.innerHTML = `
+            <div class="activity-panel" style="margin-bottom: 18px;">
+                <div class="history-recap-head">
+                    <div>
+                        <h4 class="history-recap-title">Aktivitas Tersimpan</h4>
+                        <p class="history-recap-caption">Perubahan stok, produk, dan checkout terbaru yang ikut dibawa ke device lain.</p>
+                    </div>
+                    <span class="history-summary-icon"><i class="fas fa-clock-rotate-left"></i></span>
+                </div>
+                ${latestActivities.length > 0 ? `
+                    <div class="activity-feed">
+                        ${latestActivities.map((activity) => `
+                            <div class="activity-card">
+                                <span class="activity-icon"><i class="fas ${getActivityIcon(activity.type)}"></i></span>
+                                <div class="activity-copy">
+                                    <span class="activity-title">${escapeHtml(activity.title)}</span>
+                                    <span class="activity-detail">${escapeHtml(activity.detail || 'Aktivitas tersimpan.')}</span>
+                                    <div class="activity-meta">
+                                        <span><i class="fas fa-user"></i> ${escapeHtml(activity.actor)}</span>
+                                        <span><i class="fas fa-clock"></i> ${escapeHtml(formatTransactionDisplayDate(activity.createdAt))}</span>
+                                        ${activity.deviceId ? `<span><i class="fas fa-mobile-screen"></i> ${escapeHtml(activity.deviceId)}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="history-recap-empty">Aktivitas stok dan transaksi akan tampil di sini setelah ada perubahan yang disimpan.</div>
+                `}
+            </div>
+        `;
+    }
+
+    function saveSyncSettings() {
+        const owner = document.getElementById('sync-owner')?.value.trim() || defaultSyncConfig.owner;
+        const repo = document.getElementById('sync-repo')?.value.trim() || defaultSyncConfig.repo;
+        const branch = document.getElementById('sync-branch')?.value.trim() || defaultSyncConfig.branch;
+        const path = normalizeSyncPath(document.getElementById('sync-path')?.value || defaultSyncConfig.path);
+        const token = document.getElementById('sync-token')?.value.trim() || '';
+
+        syncConfig = normalizeSyncConfig({
+            enabled: Boolean(owner && repo && branch && path && token),
+            owner,
+            repo,
+            branch,
+            path,
+            token
+        });
+        syncMeta.lastError = '';
+        saveData();
+        updateSyncPanel();
+
+        showNotice(syncConfig.enabled
+            ? 'Konfigurasi cloud tersimpan. Anda bisa langsung sinkronkan data sekarang.'
+            : 'Konfigurasi disimpan, tetapi token masih kosong sehingga mode cloud belum aktif.', 'success', 'Setup Tersimpan');
+    }
+
+    async function syncWithCloud({ interactive = false } = {}) {
+        if (!isSyncConfigured()) {
+            if (interactive) {
+                showNotice('Isi owner, repo, branch, path, dan token GitHub lebih dulu agar sinkronisasi bisa berjalan.', 'warning', 'Cloud Belum Aktif');
+            }
+            return false;
+        }
+
+        if (!canSyncNow()) {
+            syncMeta.lastError = 'Device sedang offline. Sinkronisasi akan berjalan lagi saat koneksi kembali tersedia.';
+            saveData();
+            updateSyncPanel();
+
+            if (interactive) {
+                showNotice(syncMeta.lastError, 'warning', 'Tidak Ada Koneksi');
+            }
+            return false;
+        }
+
+        if (syncState.inProgress) {
+            syncState.queued = true;
+            return false;
+        }
+
+        syncState.inProgress = true;
+        syncMeta.lastError = '';
+        updateSyncPanel();
+
+        try {
+            const remoteResult = await fetchRemoteStore();
+            let remoteStore = remoteResult.exists ? normalizeCloudStore(remoteResult.store) : getLocalCloudStore();
+            let hasLegacyMergeChanges = false;
+
+            if (remoteResult.exists) {
+                const mergedSnapshot = mergeLocalSnapshotIntoStore(remoteStore);
+                hasLegacyMergeChanges = JSON.stringify(mergedSnapshot) !== JSON.stringify(remoteStore);
+                remoteStore = mergedSnapshot;
+            }
+
+            if (!remoteResult.exists && remoteStore.activities.length === 0) {
+                remoteStore.activities = normalizeActivities([{
+                    id: createMutationId('bootstrap'),
+                    type: 'bootstrap',
+                    title: 'Sinkronisasi cloud diaktifkan',
+                    detail: 'Snapshot awal data lokal berhasil diunggah ke file bersama.',
+                    actor: currentUser?.username || 'Sistem',
+                    createdAt: new Date().toISOString(),
+                    deviceId
+                }]);
+            }
+
+            const appliedIds = new Set(remoteStore.activities.map((activity) => activity.id));
+            const pendingToApply = syncPending.filter((operation) => !appliedIds.has(operation.id));
+
+            pendingToApply.forEach((operation) => {
+                remoteStore = applyOperationToState(remoteStore, operation);
+            });
+
+            if (!remoteResult.exists || hasLegacyMergeChanges || pendingToApply.length > 0) {
+                await uploadRemoteStore(remoteStore, remoteResult.sha);
+            }
+
+            syncPending = syncPending.filter((operation) => !pendingToApply.some((item) => item.id === operation.id));
+            syncMeta.lastSyncedAt = new Date().toISOString();
+            syncMeta.lastStatus = 'Sinkron';
+            syncMeta.lastSource = 'cloud';
+            syncMeta.lastError = '';
+            replaceLocalStateFromStore(remoteStore);
+
+            if (interactive) {
+                showNotice('Data stok, transaksi, dan aktivitas berhasil disejajarkan dengan cloud.', 'success', 'Sinkron Berhasil');
+            }
+
+            return true;
+        } catch (error) {
+            syncMeta.lastError = error instanceof Error ? error.message : 'Sinkronisasi cloud gagal dijalankan.';
+            saveData();
+            updateSyncPanel();
+
+            if (interactive) {
+                showNotice(syncMeta.lastError, 'error', 'Sinkron Gagal');
+            }
+
+            return false;
+        } finally {
+            syncState.inProgress = false;
+            saveData();
+            updateSyncPanel();
+
+            if (syncState.queued) {
+                syncState.queued = false;
+                void syncWithCloud();
+            }
+        }
+    }
+
+    async function requestCloudSync(options = {}) {
+        return syncWithCloud(options);
+    }
+
+    async function pullSharedData() {
+        if (syncPending.length > 0) {
+            showNotice('Masih ada perubahan lokal yang belum terkirim. Sinkronkan dulu supaya data tidak tertimpa.', 'warning', 'Perlu Sinkron Dulu');
+            return;
+        }
+
+        const success = await syncWithCloud({ interactive: false });
+        if (success) {
+            showNotice('Data terbaru dari cloud berhasil dimuat ke device ini.', 'success', 'Cloud Dimuat');
+        }
+    }
+
+    async function syncNow() {
+        await syncWithCloud({ interactive: true });
+    }
+
+    async function syncFromCloudBeforeMutation() {
+        if (!isSyncConfigured() || !canSyncNow() || syncState.inProgress) return;
+
+        await syncWithCloud();
+    }
+
+    async function bootstrapApp() {
+        populateSyncForm();
+        updateSyncPanel();
+
+        if (isSyncConfigured()) {
+            await syncWithCloud();
+        }
+
+        refreshAllViews();
+    }
+
+    window.addEventListener('online', () => {
+        void requestCloudSync();
+    });
+
     // --- Autentikasi ---
     function login() {
         const user = document.getElementById('login-user').value.trim();
@@ -1171,6 +1998,8 @@
         document.getElementById('loading-overlay').classList.add('hidden');
         closeReceipt();
         switchView('kasir', document.querySelector('.nav-item'));
+        updateSyncPanel();
+        void requestCloudSync();
     }
 
     function logout() {
@@ -1186,6 +2015,7 @@
         document.getElementById('main-screen').classList.add('hidden');
         document.getElementById('login-screen').classList.remove('hidden');
         switchView('kasir', document.querySelector('.nav-item'));
+        updateSyncPanel();
     }
 
     // --- Navigasi Tab ---
@@ -1223,8 +2053,10 @@
         renderStok();
         renderRestockOptions();
         renderHistory();
+        renderActivityLog();
         renderCart();
         saveData();
+        updateSyncPanel();
     }
 
     function resetPaymentInput() {
@@ -1464,27 +2296,34 @@
     }
 
     // --- Proses Checkout & Struk Kertas ---
-    function processCheckout() {
+    async function processCheckout() {
         if (!currentUser) return showNotice("Sesi login berakhir. Silakan masuk kembali.", 'warning', 'Perlu Login');
         if (cart.length === 0) return showNotice("Keranjang kosong!", 'warning', 'Belum Ada Belanja');
 
+        document.getElementById('loading-overlay').classList.remove('hidden');
+
+        await syncFromCloudBeforeMutation();
+
         const stockError = validateCartStock();
-        if (stockError) return showNotice(stockError, 'warning', 'Stok Tidak Cukup');
+        if (stockError) {
+            document.getElementById('loading-overlay').classList.add('hidden');
+            refreshAllViews();
+            return showNotice(stockError, 'warning', 'Stok Tidak Cukup');
+        }
 
         const total = getCartTotal();
         const paidAmount = getPaidAmount();
         if (paidAmount < total) {
+            document.getElementById('loading-overlay').classList.add('hidden');
             updatePaymentSummary(total);
             document.getElementById('cash-received')?.focus();
             return showNotice(`Uang pembeli kurang Rp ${formatRp(total - paidAmount)}.`, 'warning', 'Pembayaran Kurang');
         }
 
-        document.getElementById('loading-overlay').classList.remove('hidden');
-
         setTimeout(() => {
             document.getElementById('loading-overlay').classList.add('hidden');
             executeCheckoutLogic();
-        }, 1000);
+        }, 700);
     }
 
     function executeCheckoutLogic() {
@@ -1507,7 +2346,7 @@
             }
         });
 
-        const trxId = 'TRX' + Math.floor(10000 + Math.random() * 90000);
+        const trxId = createTransactionId();
         const createdAt = new Date();
         const dateStr = formatTransactionDisplayDate(createdAt);
 
@@ -1522,10 +2361,18 @@
             kasir: currentUser.username
         };
         transactions.unshift(trx);
+        queueOperation('checkout', {
+            transaction: trx,
+            items: purchasedItems.map((item) => ({
+                id: item.id,
+                qty: item.qty
+            }))
+        });
 
         showReceiptModal(trx);
         clearCart(false);
         refreshAllViews();
+        void requestCloudSync();
     }
 
     function showReceiptModal(trx) {
@@ -1654,11 +2501,13 @@
         document.getElementById('restock-price').value = '';
     }
 
-    function addProduct() {
+    async function addProduct() {
         if (!isAdmin()) {
             showNotice("Hanya admin yang bisa menambah atau restok produk.", 'warning', 'Akses Ditolak');
             return;
         }
+
+        await syncFromCloudBeforeMutation();
 
         const name = document.getElementById('new-name').value.replace(/\s+/g, ' ').trim();
         const price = parseInt(document.getElementById('new-price').value, 10);
@@ -1679,20 +2528,29 @@
             return;
         }
 
-        const newId = products.length > 0 ? Math.max(...products.map((product) => product.id)) + 1 : 1;
-        products.push({ id: newId, name, price, stock });
+        let newId = createNumericId();
+        while (products.some((product) => product.id === newId)) {
+            newId = createNumericId();
+        }
+
+        const newProduct = { id: newId, name, price, stock };
+        products.push(newProduct);
+        queueOperation('add_product', { product: newProduct });
         clearAddProductForm();
         refreshAllViews();
         document.getElementById('restock-product').value = String(newId);
         updateRestockProductInfo();
         showNotice(`Produk baru ${name} berhasil ditambahkan!`, 'success', 'Produk Ditambahkan');
+        void requestCloudSync();
     }
 
-    function restockProduct() {
+    async function restockProduct() {
         if (!isAdmin()) {
             showNotice("Hanya admin yang bisa menambah atau restok produk.", 'warning', 'Akses Ditolak');
             return;
         }
+
+        await syncFromCloudBeforeMutation();
 
         const productId = document.getElementById('restock-product').value;
         const qty = parseInt(document.getElementById('restock-qty').value, 10);
@@ -1726,10 +2584,17 @@
         }
 
         clearRestockForm();
+        queueOperation('restock_product', {
+            productId: product.id,
+            productName: product.name,
+            qty,
+            newPrice
+        });
         refreshAllViews();
         document.getElementById('restock-product').value = productId;
         updateRestockProductInfo();
         showNotice(`Stok ${product.name} berhasil ditambahkan!`, 'success', 'Restok Berhasil');
+        void requestCloudSync();
     }
 
     function addOrRestock() {
@@ -1848,10 +2713,6 @@
         }).join('');
     }
 
-    function saveData() {
-        localStorage.setItem(storageKeys.products, JSON.stringify(products));
-        localStorage.setItem(storageKeys.history, JSON.stringify(transactions));
-    }
 </script>
 
 </body>
