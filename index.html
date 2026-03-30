@@ -850,8 +850,32 @@
     let toastTimer = null;
     let installPromptEvent = null;
     const runtimeConfig = window.DAPOERMUDA_APP_CONFIG || {};
+    function normalizeConfiguredApiBaseUrl(value) {
+        const rawValue = String(value ?? '').trim();
+        if (!rawValue) return '';
+
+        try {
+            const parsed = new URL(rawValue, window.location.href);
+            const cleanPath = parsed.pathname.replace(/\/+$/, '');
+
+            if (!cleanPath || cleanPath === '/') {
+                parsed.pathname = '/api';
+            } else if (!/\/api$/i.test(cleanPath)) {
+                parsed.pathname = `${cleanPath}/api`;
+            } else {
+                parsed.pathname = cleanPath;
+            }
+
+            parsed.hash = '';
+            return parsed.toString().replace(/\/+$/, '');
+        } catch (error) {
+            const compact = rawValue.replace(/\/+$/, '');
+            return /\/api$/i.test(compact) ? compact : `${compact}/api`;
+        }
+    }
+
     const resolvedApiBaseUrl = (() => {
-        const configuredUrl = String(runtimeConfig.apiBaseUrl ?? '').trim().replace(/\/+$/, '');
+        const configuredUrl = normalizeConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl ?? '');
         const isCapacitorLocalHost = Boolean(window.Capacitor) && /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
 
         if (configuredUrl) {
@@ -1585,6 +1609,21 @@
         return Boolean(backendState.enabled && backendState.apiBaseUrl);
     }
 
+    function buildBackendResponseError(status, payloadText, contentType) {
+        const trimmedPayload = String(payloadText || '').trim();
+        const looksLikeHtml = /text\/html/i.test(contentType || '') || /^<!doctype html/i.test(trimmedPayload) || /^<html/i.test(trimmedPayload);
+
+        if (looksLikeHtml && [404, 405].includes(Number(status))) {
+            return 'URL backend salah. APK sedang mengarah ke halaman web, bukan server API. Gunakan domain backend yang benar saat build APK.';
+        }
+
+        if (looksLikeHtml) {
+            return 'Backend merespons halaman HTML, bukan data API. Periksa lagi URL backend yang dipasang ke aplikasi.';
+        }
+
+        return '';
+    }
+
     async function requestBackend(path, options = {}) {
         if (!isBackendEnabled()) {
             throw new Error('Backend belum dikonfigurasi.');
@@ -1618,6 +1657,7 @@
                 signal: controller.signal
             });
             const payloadText = await response.text();
+            const contentType = response.headers.get('content-type') || '';
             let payload = {};
 
             if (payloadText) {
@@ -1631,9 +1671,15 @@
             }
 
             if (!response.ok) {
-                const error = new Error(payload.message || `Backend merespons ${response.status}.`);
+                const friendlyMessage = buildBackendResponseError(response.status, payloadText, contentType);
+                const error = new Error(friendlyMessage || payload.message || `Backend merespons ${response.status}.`);
                 error.status = response.status;
                 throw error;
+            }
+
+            const htmlSuccessMessage = buildBackendResponseError(response.status, payloadText, contentType);
+            if (htmlSuccessMessage) {
+                throw new Error(htmlSuccessMessage);
             }
 
             return payload;

@@ -7,8 +7,37 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const outputPath = path.join(rootDir, 'app-config.js');
 
+function normalizeApiBaseUrl(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  try {
+    const parsed = new URL(rawValue);
+    const cleanPath = parsed.pathname.replace(/\/+$/, '');
+
+    if (!cleanPath || cleanPath === '/') {
+      parsed.pathname = '/api';
+    } else if (!/\/api$/i.test(cleanPath)) {
+      parsed.pathname = `${cleanPath}/api`;
+    } else {
+      parsed.pathname = cleanPath;
+    }
+
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch (error) {
+    const compact = rawValue.replace(/\/+$/, '');
+
+    if (/\/api$/i.test(compact)) {
+      return compact;
+    }
+
+    return `${compact}/api`;
+  }
+}
+
 const inputUrl = process.argv[2] || process.env.DAPOERMUDA_API_BASE_URL || '';
-const normalizedApiBaseUrl = String(inputUrl).trim().replace(/\/+$/, '');
+const normalizedApiBaseUrl = normalizeApiBaseUrl(inputUrl);
 const timeoutInput = process.env.DAPOERMUDA_REQUEST_TIMEOUT_MS || '12000';
 const requestTimeoutMs = Math.max(4000, Number(timeoutInput) || 12000);
 

@@ -30,7 +30,7 @@ Server akan:
 Owner aplikasi cukup mengatur sekali saat deploy:
 
 - `DAPOERMUDA_API_BASE_URL`
-  Dipakai saat build asset web atau APK jika backend berada di domain lain, misalnya `https://domain-anda.com/api`
+  Dipakai saat build asset web atau APK jika backend berada di domain lain, misalnya `https://domain-anda.com` atau `https://domain-anda.com/api`
 - Environment variable opsional:
   `HOST`, `PORT`, `DATA_FILE`, `CORS_ORIGIN`, `SESSION_TTL_MS`
   `DAPOERMUDA_API_BASE_URL`, `DAPOERMUDA_REQUEST_TIMEOUT_MS`
@@ -56,7 +56,7 @@ Setelah domain backend aktif, web yang dibuka dari domain itu akan langsung mema
 Untuk PWA:
 
 1. Upload project ke hosting HTTPS yang juga menjalankan backend.
-2. Jika domain API berbeda, build asset dengan `DAPOERMUDA_API_BASE_URL=https://domain-api-anda/api npm run build:web`
+2. Jika domain API berbeda, build asset dengan `DAPOERMUDA_API_BASE_URL=https://domain-api-anda.com npm run build:web`
 3. Buka link aplikasi di Chrome Android.
 4. Pilih install atau tambahkan ke layar utama.
 
@@ -70,7 +70,7 @@ APK debug hasil build ada di:
 
 Untuk mengunci URL backend ke APK:
 
-1. Deploy backend dulu dan dapatkan URL publiknya, misalnya `https://dapoermuda-production.up.railway.app/api`
+1. Deploy backend dulu dan dapatkan URL publiknya, misalnya `https://dapoermuda-production.up.railway.app`
 2. Jalankan:
-   `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -ApiBaseUrl "https://dapoermuda-production.up.railway.app/api"`
+   `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -ApiBaseUrl "https://dapoermuda-production.up.railway.app"`
 3. APK baru akan memakai backend itu secara otomatis.
