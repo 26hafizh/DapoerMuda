@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "products": [
+    {
+      "id": 1,
+      "name": "Indomie Goreng",
+      "price": 3500,
+      "stock": 50
+    },
+    {
+      "id": 2,
+      "name": "Kopi Hitam",
+      "price": 4000,
+      "stock": 30
+    },
+    {
+      "id": 3,
+      "name": "Beras 1L",
+      "price": 12000,
+      "stock": 20
+    },
+    {
+      "id": 4,
+      "name": "Telur 1kg",
+      "price": 28000,
+      "stock": 15
+    }
+  ],
+  "transactions": [],
+  "activities": []
+}

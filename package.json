@@ -5,6 +5,8 @@
   "description": "Android wrapper and PWA setup for DapoerMuda POS.",
   "scripts": {
     "build:web": "node scripts/sync-web.mjs",
+    "start": "npm run build:web && node server/index.mjs",
+    "start:api": "node server/index.mjs",
     "cap:sync": "npm run build:web && npx cap sync android",
     "cap:open": "npx cap open android"
   },

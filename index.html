@@ -842,12 +842,34 @@
     </div>
 </div>
 
+<script src="app-config.js"></script>
 <script>
     // --- Data & State ---
     let currentUser = null;
     let cart = [];
     let toastTimer = null;
     let installPromptEvent = null;
+    const runtimeConfig = window.DAPOERMUDA_APP_CONFIG || {};
+    const resolvedApiBaseUrl = (() => {
+        const configuredUrl = String(runtimeConfig.apiBaseUrl ?? '').trim().replace(/\/+$/, '');
+        const isCapacitorLocalHost = Boolean(window.Capacitor) && /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+
+        if (configuredUrl) {
+            return configuredUrl;
+        }
+
+        if (/^https?:$/i.test(location.protocol) && !isCapacitorLocalHost) {
+            return `${location.origin.replace(/\/+$/, '')}/api`;
+        }
+
+        return '';
+    })();
+    const backendState = {
+        enabled: Boolean(resolvedApiBaseUrl),
+        apiBaseUrl: resolvedApiBaseUrl,
+        token: '',
+        requestTimeoutMs: Math.max(4000, Number(runtimeConfig.requestTimeoutMs) || 12000)
+    };
 
     const storageKeys = {
         products: 'warung_products',
@@ -1536,6 +1558,170 @@
         }
     }
 
+    function buildProductFingerprint(items) {
+        return normalizeProducts(items)
+            .map((item) => `${item.id}:${item.name.toLowerCase()}:${item.price}:${item.stock}`)
+            .sort()
+            .join('|');
+    }
+
+    function hasMeaningfulSnapshot(snapshot) {
+        const normalizedSnapshot = normalizeCloudStore(snapshot);
+        const defaultFingerprint = buildProductFingerprint(defaultProducts);
+        const currentFingerprint = buildProductFingerprint(normalizedSnapshot.products);
+
+        return (
+            normalizedSnapshot.transactions.length > 0
+            || normalizedSnapshot.activities.length > 0
+            || currentFingerprint !== defaultFingerprint
+        );
+    }
+
+    function isPristineBackendSnapshot(snapshot) {
+        return !hasMeaningfulSnapshot(snapshot);
+    }
+
+    function isBackendEnabled() {
+        return Boolean(backendState.enabled && backendState.apiBaseUrl);
+    }
+
+    async function requestBackend(path, options = {}) {
+        if (!isBackendEnabled()) {
+            throw new Error('Backend belum dikonfigurasi.');
+        }
+
+        const {
+            method = 'GET',
+            body,
+            auth = true
+        } = options;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), backendState.requestTimeoutMs);
+
+        try {
+            const headers = {
+                Accept: 'application/json'
+            };
+
+            if (body !== undefined) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            if (auth && backendState.token) {
+                headers.Authorization = `Bearer ${backendState.token}`;
+            }
+
+            const response = await fetch(`${backendState.apiBaseUrl}${path}`, {
+                method,
+                headers,
+                body: body !== undefined ? JSON.stringify(body) : undefined,
+                signal: controller.signal
+            });
+            const payloadText = await response.text();
+            let payload = {};
+
+            if (payloadText) {
+                try {
+                    payload = JSON.parse(payloadText);
+                } catch (error) {
+                    payload = {
+                        message: payloadText.trim()
+                    };
+                }
+            }
+
+            if (!response.ok) {
+                const error = new Error(payload.message || `Backend merespons ${response.status}.`);
+                error.status = response.status;
+                throw error;
+            }
+
+            return payload;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Backend tidak merespons tepat waktu.');
+            }
+
+            throw error;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    function applyBackendSnapshot(snapshot) {
+        products = normalizeProducts(snapshot?.products ?? []);
+        transactions = normalizeTransactions(snapshot?.transactions ?? []);
+        activities = normalizeActivities(snapshot?.activities ?? []);
+        reconcileCartWithProducts();
+        refreshAllViews();
+    }
+
+    async function loadBackendSnapshot() {
+        const result = await requestBackend('/bootstrap');
+        applyBackendSnapshot(result.data);
+        return result.data;
+    }
+
+    async function loginWithBackend(username, password) {
+        const result = await requestBackend('/auth/login', {
+            method: 'POST',
+            auth: false,
+            body: { username, password }
+        });
+
+        backendState.token = result.token || '';
+        currentUser = result.user || null;
+        let nextSnapshot = result.data;
+        let seededFromLocal = false;
+        let seedWarning = '';
+
+        if (currentUser?.role === 'admin') {
+            const localSnapshot = getLocalCloudStore();
+
+            if (hasMeaningfulSnapshot(localSnapshot) && isPristineBackendSnapshot(nextSnapshot)) {
+                try {
+                    const seeded = await requestBackend('/admin/seed', {
+                        method: 'POST',
+                        body: { snapshot: localSnapshot }
+                    });
+
+                    nextSnapshot = seeded.data;
+                    seededFromLocal = true;
+                } catch (error) {
+                    if (error.status === 409) {
+                        const refreshed = await requestBackend('/bootstrap');
+                        nextSnapshot = refreshed.data;
+                    } else {
+                        console.warn('Seed awal backend dari data lokal gagal dijalankan.', error);
+                        seedWarning = 'Login berhasil, tetapi data lokal lama belum sempat dipindahkan ke backend.';
+                    }
+                }
+            }
+        }
+
+        applyBackendSnapshot(nextSnapshot);
+        return {
+            ...result,
+            data: nextSnapshot,
+            seededFromLocal,
+            seedWarning
+        };
+    }
+
+    async function logoutFromBackend() {
+        if (!backendState.token) return;
+
+        try {
+            await requestBackend('/auth/logout', {
+                method: 'POST'
+            });
+        } catch (error) {
+            console.warn('Logout backend gagal dipanggil.', error);
+        } finally {
+            backendState.token = '';
+        }
+    }
+
     function isSyncConfigured() {
         return Boolean(
             syncConfig.enabled
@@ -1739,6 +1925,11 @@
 
         if (!card || !title || !text || !badge) return;
 
+        if (isBackendEnabled()) {
+            card.classList.add('hidden');
+            return;
+        }
+
         card.classList.toggle('hidden', !isAdmin());
         badge.classList.remove('is-warning', 'is-error');
 
@@ -1939,6 +2130,25 @@
     }
 
     async function requestCloudSync(options = {}) {
+        if (isBackendEnabled()) {
+            if (!backendState.token || navigator.onLine === false) {
+                return false;
+            }
+
+            try {
+                await loadBackendSnapshot();
+                return true;
+            } catch (error) {
+                console.warn('Gagal memuat ulang snapshot backend.', error);
+
+                if (options.interactive) {
+                    showNotice(error.message || 'Data backend belum bisa dimuat ulang.', 'error', 'Refresh Gagal');
+                }
+
+                return false;
+            }
+        }
+
         return syncWithCloud(options);
     }
 
@@ -1955,10 +2165,17 @@
     }
 
     async function syncNow() {
-        await syncWithCloud({ interactive: true });
+        await requestCloudSync({ interactive: true });
     }
 
     async function syncFromCloudBeforeMutation() {
+        if (isBackendEnabled()) {
+            if (!backendState.token) return;
+
+            await loadBackendSnapshot();
+            return;
+        }
+
         if (!isSyncConfigured() || !canSyncNow() || syncState.inProgress) return;
 
         await syncWithCloud();
@@ -1968,7 +2185,7 @@
         populateSyncForm();
         updateSyncPanel();
 
-        if (isSyncConfigured()) {
+        if (!isBackendEnabled() && isSyncConfigured()) {
             await syncWithCloud();
         }
 
@@ -1976,7 +2193,7 @@
     }
 
     window.addEventListener('online', () => {
-        void requestCloudSync();
+        void requestCloudSync({ silent: true });
     });
 
     function scrollActivePageToTop() {
@@ -2036,17 +2253,27 @@
     }
 
     // --- Autentikasi ---
-    function login() {
+    async function login() {
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value;
+        let loginResult = null;
 
-        if (user === 'admin' && pass === '123') {
-            currentUser = { username: 'Admin Utama', role: 'admin' };
-        } else if (user === 'user' && pass === '123') {
-            currentUser = { username: 'Kasir Shift 1', role: 'user' };
+        if (isBackendEnabled()) {
+            try {
+                loginResult = await loginWithBackend(user, pass);
+            } catch (error) {
+                showNotice(error.message || "Username atau password salah!", 'error', 'Login Gagal');
+                return;
+            }
         } else {
-            showNotice("Username atau password salah!", 'error', 'Login Gagal');
-            return;
+            if (user === 'admin' && pass === '123') {
+                currentUser = { username: 'Admin Utama', role: 'admin' };
+            } else if (user === 'user' && pass === '123') {
+                currentUser = { username: 'Kasir Shift 1', role: 'user' };
+            } else {
+                showNotice("Username atau password salah!", 'error', 'Login Gagal');
+                return;
+            }
         }
 
         securityReloginPendingNotice = false;
@@ -2060,10 +2287,23 @@
         switchView('kasir', document.querySelector('.nav-item'));
         scrollActivePageToTop();
         updateSyncPanel();
-        void requestCloudSync();
+
+        if (loginResult?.seededFromLocal) {
+            showNotice('Data lokal lama berhasil dipindahkan ke backend dan sekarang menjadi sumber data utama.', 'success', 'Backend Siap');
+        } else if (loginResult?.seedWarning) {
+            showNotice(loginResult.seedWarning, 'warning', 'Perlu Cek Data');
+        }
+
+        if (!isBackendEnabled()) {
+            void requestCloudSync();
+        }
     }
 
     function logout() {
+        if (isBackendEnabled()) {
+            void logoutFromBackend();
+        }
+
         currentUser = null;
         cart = [];
         closeReceipt();
@@ -2385,16 +2625,45 @@
 
         setTimeout(() => {
             document.getElementById('loading-overlay').classList.add('hidden');
-            executeCheckoutLogic();
+            void executeCheckoutLogic();
         }, 700);
     }
 
-    function executeCheckoutLogic() {
+    async function executeCheckoutLogic() {
         const stockError = validateCartStock();
         if (stockError) {
             refreshAllViews();
             showNotice(`Gagal: ${stockError}`, 'error', 'Checkout Gagal');
             return;
+        }
+
+        if (isBackendEnabled()) {
+            try {
+                const result = await requestBackend('/transactions', {
+                    method: 'POST',
+                    body: {
+                        items: cart.map((item) => ({
+                            id: item.id,
+                            qty: item.qty
+                        })),
+                        paidAmount: getPaidAmount()
+                    }
+                });
+
+                applyBackendSnapshot(result.data);
+                showReceiptModal(result.transaction);
+                clearCart(false);
+                resetPaymentInput();
+                return;
+            } catch (error) {
+                try {
+                    await loadBackendSnapshot();
+                } catch (snapshotError) {
+                    console.warn('Gagal memuat ulang data backend setelah checkout gagal.', snapshotError);
+                }
+                showNotice(error.message || 'Checkout gagal disimpan ke backend.', 'error', 'Checkout Gagal');
+                return;
+            }
         }
 
         const purchasedItems = cart.map((item) => ({ ...item }));
@@ -2591,6 +2860,23 @@
             return;
         }
 
+        if (isBackendEnabled()) {
+            try {
+                const result = await requestBackend('/products', {
+                    method: 'POST',
+                    body: { name, price, stock }
+                });
+
+                applyBackendSnapshot(result.data);
+                clearAddProductForm();
+                showNotice(result.message || `Produk baru ${name} berhasil ditambahkan!`, 'success', 'Produk Ditambahkan');
+                return;
+            } catch (error) {
+                showNotice(error.message || 'Produk baru gagal disimpan ke backend.', 'error', 'Simpan Gagal');
+                return;
+            }
+        }
+
         let newId = createNumericId();
         while (products.some((product) => product.id === newId)) {
             newId = createNumericId();
@@ -2639,6 +2925,28 @@
         if (!product) {
             showNotice("Produk tidak ditemukan.", 'error', 'Data Tidak Ditemukan');
             return;
+        }
+
+        if (isBackendEnabled()) {
+            try {
+                const result = await requestBackend(`/products/${product.id}/restock`, {
+                    method: 'POST',
+                    body: {
+                        qty,
+                        newPrice
+                    }
+                });
+
+                applyBackendSnapshot(result.data);
+                clearRestockForm();
+                document.getElementById('restock-product').value = String(product.id);
+                updateRestockProductInfo();
+                showNotice(result.message || `Stok ${product.name} berhasil ditambahkan!`, 'success', 'Restok Berhasil');
+                return;
+            } catch (error) {
+                showNotice(error.message || 'Restok gagal disimpan ke backend.', 'error', 'Restok Gagal');
+                return;
+            }
         }
 
         product.stock += qty;

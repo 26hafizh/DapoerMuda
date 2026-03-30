@@ -8,6 +8,7 @@ const rootDir = path.resolve(__dirname, '..');
 const outputDir = path.join(rootDir, 'www');
 
 const staticEntries = [
+  'app-config.js',
   'index.html',
   'manifest.webmanifest',
   'service-worker.js',

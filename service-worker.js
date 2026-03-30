@@ -1,6 +1,7 @@
-const CACHE_NAME = 'dapoermuda-pos-v1';
+const CACHE_NAME = 'dapoermuda-pos-v2';
 const APP_SHELL = [
   './',
+  './app-config.js',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
@@ -27,6 +28,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
