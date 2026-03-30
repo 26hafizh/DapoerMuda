@@ -850,6 +850,15 @@
     let toastTimer = null;
     let installPromptEvent = null;
     const runtimeConfig = window.DAPOERMUDA_APP_CONFIG || {};
+    function isEmbeddedLocalOrigin() {
+        const hostName = String(location.hostname || '').toLowerCase();
+        const isLocalHost = hostName === 'localhost' || hostName === '127.0.0.1';
+        const protocol = String(location.protocol || '').toLowerCase();
+        const port = String(location.port || '');
+
+        return isLocalHost && /^https?:$/i.test(protocol) && (port === '' || port === '443');
+    }
+
     function normalizeConfiguredApiBaseUrl(value) {
         const rawValue = String(value ?? '').trim();
         if (!rawValue) return '';
@@ -876,13 +885,12 @@
 
     const resolvedApiBaseUrl = (() => {
         const configuredUrl = normalizeConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl ?? '');
-        const isCapacitorLocalHost = Boolean(window.Capacitor) && /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
 
         if (configuredUrl) {
             return configuredUrl;
         }
 
-        if (/^https?:$/i.test(location.protocol) && !isCapacitorLocalHost) {
+        if (/^https?:$/i.test(location.protocol) && !isEmbeddedLocalOrigin()) {
             return `${location.origin.replace(/\/+$/, '')}/api`;
         }
 
