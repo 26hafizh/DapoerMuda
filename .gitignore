@@ -1,3 +1,12 @@
 chrome-headless-profile/
 test-results/
 tmp-index-check.js
+node_modules/
+www/
+.gradle-user/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/

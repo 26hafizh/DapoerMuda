@@ -1,0 +1,8 @@
+{
+  "appId": "com.hfz.dapoermudapos",
+  "appName": "DapoerMuda POS",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

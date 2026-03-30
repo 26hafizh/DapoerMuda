@@ -1,0 +1,18 @@
+{
+  "name": "dapoermuda-pos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android wrapper and PWA setup for DapoerMuda POS.",
+  "scripts": {
+    "build:web": "node scripts/sync-web.mjs",
+    "cap:sync": "npm run build:web && npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3"
+  }
+}
