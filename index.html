@@ -855,8 +855,7 @@
         const isLocalHost = hostName === 'localhost' || hostName === '127.0.0.1';
         const protocol = String(location.protocol || '').toLowerCase();
         const port = String(location.port || '');
-
-        return isLocalHost && /^https?:$/i.test(protocol) && (port === '' || port === '443');
+        return isLocalHost && /^https?:$/i.test(protocol) && port !== '8787';
     }
 
     function normalizeConfiguredApiBaseUrl(value) {
