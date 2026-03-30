@@ -1,0 +1,31 @@
+{
+  "id": "./",
+  "name": "DapoerMuda POS",
+  "short_name": "DapoerMuda",
+  "description": "Kasir mobile DapoerMuda untuk transaksi, stok, dan riwayat penjualan.",
+  "lang": "id-ID",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbf4ec",
+  "theme_color": "#1d1614",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}
