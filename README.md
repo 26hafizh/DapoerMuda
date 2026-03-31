@@ -71,9 +71,27 @@ APK debug hasil build ada di:
 
 `android/app/build/outputs/apk/debug/app-debug.apk`
 
+Untuk build APK final yang signed:
+
+`npm run android:final`
+
+Output final:
+
+- `android/app/build/outputs/apk/final/app-final.apk`
+
 Untuk mengunci URL backend ke APK:
 
 1. Deploy backend dulu dan dapatkan URL publiknya, misalnya `https://dapoermuda-production.up.railway.app`
 2. Jalankan:
    `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -ApiBaseUrl "https://dapoermuda-production.up.railway.app"`
 3. APK baru akan memakai backend itu secara otomatis.
+
+Untuk build final dengan backend publik:
+
+`powershell -ExecutionPolicy Bypass -File scripts/build-android-release.ps1 -ApiBaseUrl "https://dapoermuda-production.up.railway.app" -VersionName "1.0.0" -VersionCode 1`
+
+Catatan:
+
+- APK final dibuat dari jalur build Android yang paling stabil, lalu ditandatangani dengan keystore final lokal.
+- Keystore final lokal dibuat otomatis sekali dan disimpan hanya di mesin ini.
+- File sensitif rilis tidak ikut masuk Git.

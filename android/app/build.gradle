@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+def releaseStoreFile = System.getenv('DAPOERMUDA_RELEASE_STORE_FILE')
+def releaseStorePassword = System.getenv('DAPOERMUDA_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('DAPOERMUDA_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('DAPOERMUDA_RELEASE_KEY_PASSWORD')
+def appVersionCode = Integer.parseInt(System.getenv('DAPOERMUDA_VERSION_CODE') ?: '1')
+def appVersionName = System.getenv('DAPOERMUDA_VERSION_NAME') ?: '1.0.0'
+def finalBuildEnabled = (System.getenv('DAPOERMUDA_FINAL_BUILD') ?: '').equalsIgnoreCase('true')
+
 android {
     namespace "com.hfz.dapoermudapos"
     compileSdk rootProject.ext.compileSdkVersion
@@ -10,13 +18,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     defaultConfig {
         applicationId "com.hfz.dapoermudapos"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -26,9 +42,19 @@ android {
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            if (finalBuildEnabled && signingConfigs.findByName('release') != null) {
+                signingConfig signingConfigs.release
+                debuggable false
+                jniDebuggable false
+                renderscriptDebuggable false
+            } else {
+                signingConfig signingConfigs.debug
+            }
         }
         release {
+            if (signingConfigs.findByName('release') != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -1,5 +1,6 @@
 chrome-headless-profile/
 test-results/
+.vscode/
 tmp-index-check.js
 node_modules/
 www/
@@ -12,6 +13,10 @@ android/app/debug.keystore
 android/build/
 android/capacitor-cordova-android-plugins/
 .android-user/
+.android-user-release/
+android/app/release.keystore
+.gradle-user-release/
+.release-signing.local.json
 server/data/*.db
 server/data/*-wal
 server/data/*-shm

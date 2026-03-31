@@ -10,7 +10,9 @@
     "start:api": "node server/index.mjs",
     "cap:sync": "npm run build:web && npx cap sync android",
     "cap:open": "npx cap open android",
-    "android:debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1"
+    "android:debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",
+    "android:release": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release.ps1",
+    "android:final": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release.ps1"
   },
   "engines": {
     "node": ">=24"
