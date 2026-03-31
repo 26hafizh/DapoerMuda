@@ -1,7 +1,8 @@
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { serverConfig } from './config.mjs';
+import { serverConfig, seedUsers } from './config.mjs';
 
 const defaultProducts = [
   { id: 1, name: 'Indomie Goreng', price: 3500, stock: 50 },
@@ -11,6 +12,7 @@ const defaultProducts = [
 ];
 
 const legacyJsonDataFile = path.join(path.dirname(serverConfig.dataFile), 'app.json');
+const userLoginPattern = /^[a-z0-9._-]{3,32}$/i;
 
 let databasePromise = null;
 let writeQueue = Promise.resolve();
@@ -23,6 +25,25 @@ function createHttpError(status, message) {
 
 function normalizeWhitespace(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeLogin(value) {
+  return normalizeWhitespace(value).toLowerCase();
+}
+
+function normalizeRole(value) {
+  return String(value ?? '').trim().toLowerCase() === 'admin' ? 'admin' : 'user';
+}
+
+function normalizeIsoDate(value, fallback = '') {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+
+  return date.toISOString();
 }
 
 function formatTransactionDisplayDate(dateInput) {
@@ -91,6 +112,62 @@ function normalizeActivities(items) {
     .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
 }
 
+function buildPublicUser(user) {
+  return {
+    login: normalizeLogin(user.login),
+    displayName: normalizeWhitespace(user.displayName) || normalizeLogin(user.login),
+    role: normalizeRole(user.role),
+    isActive: Boolean(user.isActive),
+    createdAt: normalizeIsoDate(user.createdAt),
+    updatedAt: normalizeIsoDate(user.updatedAt),
+    lastLoginAt: normalizeIsoDate(user.lastLoginAt)
+  };
+}
+
+function normalizePublicUsers(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map((user) => buildPublicUser(user))
+    .filter((user) => user.login);
+}
+
+function buildSessionUser(user) {
+  return {
+    login: normalizeLogin(user.login),
+    username: normalizeWhitespace(user.displayName) || normalizeLogin(user.login),
+    role: normalizeRole(user.role)
+  };
+}
+
+function hashPassword(password, saltInput = randomBytes(16).toString('hex')) {
+  const normalizedPassword = String(password ?? '');
+  if (normalizedPassword.length < 3) {
+    throw createHttpError(400, 'Password minimal 3 karakter.');
+  }
+
+  const digest = scryptSync(normalizedPassword, saltInput, 64);
+  return `scrypt:${saltInput}:${digest.toString('hex')}`;
+}
+
+function verifyPassword(password, storedValue) {
+  const rawStoredValue = String(storedValue ?? '');
+  if (!rawStoredValue) return false;
+
+  if (rawStoredValue.startsWith('scrypt:')) {
+    const [, salt, expectedHash] = rawStoredValue.split(':');
+    if (!salt || !expectedHash) return false;
+
+    const expectedBuffer = Buffer.from(expectedHash, 'hex');
+    const actualBuffer = scryptSync(String(password ?? ''), salt, expectedBuffer.length);
+    return expectedBuffer.length === actualBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+  }
+
+  const left = Buffer.from(String(password ?? ''));
+  const right = Buffer.from(rawStoredValue);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
 function normalizeState(value) {
   const source = value && typeof value === 'object' ? value : {};
 
@@ -135,6 +212,21 @@ function buildActivity({ type, title, detail, actor }) {
     createdAt: new Date().toISOString(),
     deviceId: 'server'
   };
+}
+
+function insertActivityRow(db, activity) {
+  db.prepare(`
+    INSERT INTO activities (id, type, title, detail, actor, created_at, device_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    activity.id,
+    activity.type,
+    activity.title,
+    activity.detail,
+    activity.actor,
+    activity.createdAt,
+    activity.deviceId
+  );
 }
 
 function getNextProductId(products) {
@@ -209,14 +301,61 @@ async function initializeDatabase() {
       created_at TEXT NOT NULL,
       device_id TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      login TEXT PRIMARY KEY COLLATE NOCASE,
+      display_name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_login_at TEXT
+    );
   `);
 
+  bootstrapUsersIfNeeded(db);
   await bootstrapDatabaseIfNeeded(db);
   return db;
 }
 
 function getTableCount(db, tableName) {
   return Number(db.prepare(`SELECT COUNT(*) AS count FROM ${tableName}`).get().count || 0);
+}
+
+function countActiveAdmins(db) {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM users
+    WHERE role = 'admin' AND is_active = 1
+  `).get();
+
+  return Number(row?.count || 0);
+}
+
+function bootstrapUsersIfNeeded(db) {
+  if (getTableCount(db, 'users') > 0) {
+    return;
+  }
+
+  const insertUser = db.prepare(`
+    INSERT INTO users (login, display_name, role, password_hash, is_active, created_at, updated_at, last_login_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const now = new Date().toISOString();
+
+  seedUsers.forEach((user) => {
+    insertUser.run(
+      user.login,
+      user.displayName,
+      normalizeRole(user.role),
+      hashPassword(user.password),
+      1,
+      now,
+      now,
+      null
+    );
+  });
 }
 
 async function bootstrapDatabaseIfNeeded(db) {
@@ -324,6 +463,48 @@ function buildStateFromDatabase(db) {
   });
 }
 
+function getStoredUserByLogin(db, login) {
+  const normalizedLogin = normalizeLogin(login);
+  if (!normalizedLogin) return null;
+
+  const row = db.prepare(`
+    SELECT login, display_name, role, password_hash, is_active, created_at, updated_at, last_login_at
+    FROM users
+    WHERE login = ?
+  `).get(normalizedLogin);
+
+  if (!row) return null;
+
+  return {
+    login: normalizeLogin(row.login),
+    displayName: normalizeWhitespace(row.display_name) || normalizeLogin(row.login),
+    role: normalizeRole(row.role),
+    passwordHash: String(row.password_hash ?? ''),
+    isActive: Number(row.is_active) === 1,
+    createdAt: normalizeIsoDate(row.created_at),
+    updatedAt: normalizeIsoDate(row.updated_at),
+    lastLoginAt: normalizeIsoDate(row.last_login_at)
+  };
+}
+
+function listUsersFromDatabase(db) {
+  const rows = db.prepare(`
+    SELECT login, display_name, role, is_active, created_at, updated_at, last_login_at
+    FROM users
+    ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name COLLATE NOCASE ASC, login COLLATE NOCASE ASC
+  `).all();
+
+  return normalizePublicUsers(rows.map((row) => ({
+    login: row.login,
+    displayName: row.display_name,
+    role: row.role,
+    isActive: Number(row.is_active) === 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastLoginAt: row.last_login_at
+  })));
+}
+
 function replaceStateInDatabase(db, nextState) {
   const normalized = normalizeState(nextState);
   const insertProduct = db.prepare(`
@@ -389,20 +570,71 @@ function replaceStateInDatabase(db, nextState) {
   });
 }
 
-function runAtomicMutation(db, mutator) {
+function runInTransaction(db, task) {
   db.exec('BEGIN IMMEDIATE');
 
   try {
+    const result = task();
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+function runAtomicMutation(db, mutator) {
+  return runInTransaction(db, () => {
     const currentState = buildStateFromDatabase(db);
     const workingState = normalizeState(currentState);
     const resultState = mutator(workingState);
     const nextState = normalizeState(resultState ?? workingState);
     replaceStateInDatabase(db, nextState);
-    db.exec('COMMIT');
     return nextState;
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
+  });
+}
+
+async function queueDatabaseOperation(task) {
+  const operation = writeQueue.catch(() => undefined).then(async () => {
+    const db = await getDatabase();
+    return task(db);
+  });
+
+  writeQueue = operation.catch(() => undefined);
+  return operation;
+}
+
+function assertValidUserLogin(login) {
+  const normalizedLogin = normalizeLogin(login);
+
+  if (!userLoginPattern.test(normalizedLogin)) {
+    throw createHttpError(400, 'Username hanya boleh berisi huruf, angka, titik, strip, atau underscore dengan panjang 3-32 karakter.');
+  }
+
+  return normalizedLogin;
+}
+
+function assertValidDisplayName(displayName) {
+  const normalizedDisplayName = normalizeWhitespace(displayName);
+
+  if (!normalizedDisplayName) {
+    throw createHttpError(400, 'Nama pengguna wajib diisi.');
+  }
+
+  return normalizedDisplayName;
+}
+
+function ensureAdminAccountStillExists(db, currentUser, nextUser) {
+  if (currentUser.role !== 'admin' || !currentUser.isActive) {
+    return;
+  }
+
+  if (nextUser.role === 'admin' && nextUser.isActive) {
+    return;
+  }
+
+  if (countActiveAdmins(db) <= 1) {
+    throw createHttpError(409, 'Minimal harus ada satu admin aktif yang tersisa.');
   }
 }
 
@@ -416,13 +648,185 @@ export function createSnapshot(state) {
 }
 
 export async function mutateState(mutator) {
-  const operation = writeQueue.catch(() => undefined).then(async () => {
-    const db = await getDatabase();
-    return runAtomicMutation(db, mutator);
-  });
+  return queueDatabaseOperation((db) => runAtomicMutation(db, mutator));
+}
 
-  writeQueue = operation.catch(() => undefined);
-  return operation;
+export async function authenticateUser({ login, password }) {
+  return queueDatabaseOperation((db) => {
+    const matchedUser = getStoredUserByLogin(db, login);
+
+    if (!matchedUser || !matchedUser.isActive || !verifyPassword(password, matchedUser.passwordHash)) {
+      throw createHttpError(401, 'Username atau password salah.');
+    }
+
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE users
+      SET last_login_at = ?
+      WHERE login = ?
+    `).run(now, matchedUser.login);
+
+    matchedUser.lastLoginAt = now;
+    return buildSessionUser(matchedUser);
+  });
+}
+
+export async function readSessionUser(login) {
+  const db = await getDatabase();
+  const user = getStoredUserByLogin(db, login);
+
+  if (!user || !user.isActive) {
+    return null;
+  }
+
+  return buildSessionUser(user);
+}
+
+export async function listUsers() {
+  const db = await getDatabase();
+  return listUsersFromDatabase(db);
+}
+
+export async function createUser({ login, password, displayName, role, actor }) {
+  return queueDatabaseOperation((db) => runInTransaction(db, () => {
+    const normalizedLogin = assertValidUserLogin(login);
+    const normalizedDisplayName = assertValidDisplayName(displayName);
+    const normalizedRole = normalizeRole(role);
+
+    if (getStoredUserByLogin(db, normalizedLogin)) {
+      throw createHttpError(409, `Username ${normalizedLogin} sudah digunakan.`);
+    }
+
+    const now = new Date().toISOString();
+    const passwordHash = hashPassword(password);
+
+    db.prepare(`
+      INSERT INTO users (login, display_name, role, password_hash, is_active, created_at, updated_at, last_login_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      normalizedLogin,
+      normalizedDisplayName,
+      normalizedRole,
+      passwordHash,
+      1,
+      now,
+      now,
+      null
+    );
+
+    insertActivityRow(db, buildActivity({
+      type: 'user_created',
+      title: `Akun ${normalizedDisplayName} dibuat`,
+      detail: `Username ${normalizedLogin} ditambahkan dengan peran ${normalizedRole === 'admin' ? 'admin' : 'kasir'}.`,
+      actor
+    }));
+
+    return buildPublicUser({
+      login: normalizedLogin,
+      displayName: normalizedDisplayName,
+      role: normalizedRole,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: ''
+    });
+  }));
+}
+
+export async function updateUser({ login, displayName, role, password, isActive, actor, actorLogin }) {
+  return queueDatabaseOperation((db) => runInTransaction(db, () => {
+    const currentUser = getStoredUserByLogin(db, login);
+    if (!currentUser) {
+      throw createHttpError(404, 'Pengguna tidak ditemukan.');
+    }
+
+    const normalizedActorLogin = normalizeLogin(actorLogin);
+    const nextDisplayName = displayName === undefined ? currentUser.displayName : assertValidDisplayName(displayName);
+    const nextRole = role === undefined ? currentUser.role : normalizeRole(role);
+    const nextIsActive = isActive === undefined ? currentUser.isActive : Boolean(isActive);
+    const shouldUpdatePassword = password !== undefined && String(password).trim() !== '';
+
+    if (currentUser.login === normalizedActorLogin && !nextIsActive) {
+      throw createHttpError(400, 'Admin yang sedang dipakai tidak bisa dinonaktifkan dari sesi ini.');
+    }
+
+    if (currentUser.login === normalizedActorLogin && nextRole !== 'admin') {
+      throw createHttpError(400, 'Admin yang sedang dipakai tidak bisa diturunkan perannya dari sesi ini.');
+    }
+
+    ensureAdminAccountStillExists(db, currentUser, {
+      ...currentUser,
+      displayName: nextDisplayName,
+      role: nextRole,
+      isActive: nextIsActive
+    });
+
+    const hasChanges = (
+      nextDisplayName !== currentUser.displayName
+      || nextRole !== currentUser.role
+      || nextIsActive !== currentUser.isActive
+      || shouldUpdatePassword
+    );
+
+    if (!hasChanges) {
+      return buildPublicUser(currentUser);
+    }
+
+    const now = new Date().toISOString();
+    const updateFields = [
+      'display_name = ?',
+      'role = ?',
+      'is_active = ?',
+      'updated_at = ?'
+    ];
+    const updateValues = [
+      nextDisplayName,
+      nextRole,
+      nextIsActive ? 1 : 0,
+      now
+    ];
+
+    if (shouldUpdatePassword) {
+      updateFields.push('password_hash = ?');
+      updateValues.push(hashPassword(password));
+    }
+
+    updateValues.push(currentUser.login);
+
+    db.prepare(`
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE login = ?
+    `).run(...updateValues);
+
+    const updatedUser = getStoredUserByLogin(db, currentUser.login);
+    const detailParts = [];
+
+    if (nextDisplayName !== currentUser.displayName) {
+      detailParts.push(`nama diperbarui menjadi ${nextDisplayName}`);
+    }
+
+    if (nextRole !== currentUser.role) {
+      detailParts.push(`peran diubah menjadi ${nextRole === 'admin' ? 'admin' : 'kasir'}`);
+    }
+
+    if (nextIsActive !== currentUser.isActive) {
+      detailParts.push(nextIsActive ? 'akun diaktifkan kembali' : 'akun dinonaktifkan');
+    }
+
+    if (shouldUpdatePassword) {
+      detailParts.push('password direset');
+    }
+
+    insertActivityRow(db, buildActivity({
+      type: 'user_updated',
+      title: `Akun ${updatedUser.displayName} diperbarui`,
+      detail: detailParts.join(', ') || 'Data pengguna diperbarui.',
+      actor
+    }));
+
+    return buildPublicUser(updatedUser);
+  }));
 }
 
 export async function addProduct({ name, price, stock, actor }) {

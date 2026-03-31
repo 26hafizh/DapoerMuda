@@ -8,6 +8,7 @@
     "build:web": "npm run prepare:config && node scripts/sync-web.mjs",
     "start": "npm run build:web && node server/index.mjs",
     "start:api": "node server/index.mjs",
+    "users:env": "node scripts/print-app-users-json.mjs",
     "cap:sync": "npm run build:web && npx cap sync android",
     "cap:open": "npx cap open android",
     "android:debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",

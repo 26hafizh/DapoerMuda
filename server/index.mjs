@@ -3,8 +3,20 @@ import { access } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { serverConfig, appUsers } from './config.mjs';
-import { addProduct, createSnapshot, createTransaction, readState, restockProduct, seedState } from './store.mjs';
+import { serverConfig } from './config.mjs';
+import {
+  addProduct,
+  authenticateUser,
+  createSnapshot,
+  createTransaction,
+  createUser,
+  listUsers,
+  readSessionUser,
+  readState,
+  restockProduct,
+  seedState,
+  updateUser
+} from './store.mjs';
 
 const sessions = new Map();
 const publicRoot = path.resolve(serverConfig.publicDir);
@@ -29,7 +41,7 @@ function createHttpError(status, message) {
 function setCorsHeaders(response) {
   response.setHeader('Access-Control-Allow-Origin', serverConfig.corsOrigin);
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
 }
 
 function sendJson(response, statusCode, payload) {
@@ -56,10 +68,10 @@ async function readJsonBody(request) {
   }
 }
 
-function createSession(user) {
+function createSession(login) {
   const token = randomUUID();
   sessions.set(token, {
-    user,
+    login,
     expiresAt: Date.now() + serverConfig.sessionTtlMs
   });
   return token;
@@ -75,33 +87,59 @@ function pruneExpiredSessions() {
   }
 }
 
-function getSessionUser(request) {
+async function getSessionUser(request) {
   pruneExpiredSessions();
 
   const authHeader = request.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
   if (!token) {
-    const error = new Error('Sesi login tidak ditemukan.');
-    error.status = 401;
-    throw error;
+    throw createHttpError(401, 'Sesi login tidak ditemukan.');
   }
 
   const session = sessions.get(token);
   if (!session || session.expiresAt <= Date.now()) {
     sessions.delete(token);
-    const error = new Error('Sesi login sudah berakhir. Silakan masuk lagi.');
-    error.status = 401;
-    throw error;
+    throw createHttpError(401, 'Sesi login sudah berakhir. Silakan masuk lagi.');
+  }
+
+  const user = await readSessionUser(session.login);
+  if (!user) {
+    sessions.delete(token);
+    throw createHttpError(401, 'Akun Anda sudah tidak aktif. Silakan hubungi admin.');
   }
 
   session.expiresAt = Date.now() + serverConfig.sessionTtlMs;
-  return { token, user: session.user };
+  return { token, user };
+}
+
+function ensureAdmin(user) {
+  if (user.role !== 'admin') {
+    throw createHttpError(403, 'Hanya admin yang boleh menjalankan aksi ini.');
+  }
 }
 
 function matchRoute(pathname, matcher) {
   const matched = pathname.match(matcher);
   return matched || null;
+}
+
+async function buildClientSnapshot(user, state) {
+  const snapshot = createSnapshot(state ?? await readState());
+
+  if (user?.role === 'admin') {
+    snapshot.users = await listUsers();
+  }
+
+  return snapshot;
+}
+
+function decodePathSegment(value) {
+  try {
+    return decodeURIComponent(String(value ?? ''));
+  } catch (error) {
+    throw createHttpError(400, 'Parameter URL tidak valid.');
+  }
 }
 
 async function serveStatic(request, response, pathname) {
@@ -150,53 +188,39 @@ async function handleRequest(request, response) {
 
     if (url.pathname === `${serverConfig.apiBasePath}/auth/login` && request.method === 'POST') {
       const body = await readJsonBody(request);
-      const login = String(body.username ?? '').trim();
-      const password = String(body.password ?? '');
-      const matchedUser = appUsers.find((user) => user.login === login && user.password === password);
-
-      if (!matchedUser) {
-        sendJson(response, 401, { message: 'Username atau password salah.' });
-        return;
-      }
-
-      const user = {
-        username: matchedUser.displayName,
-        role: matchedUser.role,
-        login: matchedUser.login
-      };
-      const token = createSession(user);
-      const state = createSnapshot(await readState());
+      const user = await authenticateUser({
+        login: body.username,
+        password: body.password
+      });
+      const token = createSession(user.login);
 
       sendJson(response, 200, {
         message: 'Login berhasil.',
         token,
         user,
-        data: state
+        data: await buildClientSnapshot(user)
       });
       return;
     }
 
     if (url.pathname === `${serverConfig.apiBasePath}/auth/logout` && request.method === 'POST') {
-      const { token } = getSessionUser(request);
+      const { token } = await getSessionUser(request);
       sessions.delete(token);
       sendJson(response, 200, { message: 'Logout berhasil.' });
       return;
     }
 
     if (url.pathname === `${serverConfig.apiBasePath}/bootstrap` && request.method === 'GET') {
-      getSessionUser(request);
+      const { user } = await getSessionUser(request);
       sendJson(response, 200, {
-        data: createSnapshot(await readState())
+        data: await buildClientSnapshot(user)
       });
       return;
     }
 
     if (url.pathname === `${serverConfig.apiBasePath}/admin/seed` && request.method === 'POST') {
-      const { user } = getSessionUser(request);
-      if (user.role !== 'admin') {
-        sendJson(response, 403, { message: 'Hanya admin yang boleh memindahkan data awal ke backend.' });
-        return;
-      }
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
 
       const body = await readJsonBody(request);
       const state = await seedState({
@@ -206,17 +230,72 @@ async function handleRequest(request, response) {
 
       sendJson(response, 201, {
         message: 'Data awal berhasil dipindahkan ke backend.',
-        data: createSnapshot(state)
+        data: await buildClientSnapshot(user, state)
+      });
+      return;
+    }
+
+    if (url.pathname === `${serverConfig.apiBasePath}/admin/users` && request.method === 'GET') {
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
+
+      sendJson(response, 200, {
+        users: await listUsers()
+      });
+      return;
+    }
+
+    if (url.pathname === `${serverConfig.apiBasePath}/admin/users` && request.method === 'POST') {
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
+
+      const body = await readJsonBody(request);
+      const createdUser = await createUser({
+        login: body.login,
+        password: body.password,
+        displayName: body.displayName,
+        role: body.role,
+        actor: user.username
+      });
+
+      sendJson(response, 201, {
+        message: `Akun ${createdUser.displayName} berhasil dibuat.`,
+        createdUser,
+        currentUser: await readSessionUser(user.login),
+        data: await buildClientSnapshot(user)
+      });
+      return;
+    }
+
+    const userMatch = matchRoute(url.pathname, new RegExp(`^${serverConfig.apiBasePath}/admin/users/([^/]+)$`));
+    if (userMatch && request.method === 'PATCH') {
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
+
+      const body = await readJsonBody(request);
+      const updatedUser = await updateUser({
+        login: decodePathSegment(userMatch[1]),
+        displayName: body.displayName,
+        role: body.role,
+        password: body.password,
+        isActive: body.isActive,
+        actor: user.username,
+        actorLogin: user.login
+      });
+      const refreshedUser = await readSessionUser(user.login) || user;
+
+      sendJson(response, 200, {
+        message: `Akun ${updatedUser.displayName} berhasil diperbarui.`,
+        updatedUser,
+        currentUser: refreshedUser,
+        data: await buildClientSnapshot(refreshedUser)
       });
       return;
     }
 
     if (url.pathname === `${serverConfig.apiBasePath}/products` && request.method === 'POST') {
-      const { user } = getSessionUser(request);
-      if (user.role !== 'admin') {
-        sendJson(response, 403, { message: 'Hanya admin yang boleh menambah produk.' });
-        return;
-      }
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
 
       const body = await readJsonBody(request);
       const state = await addProduct({
@@ -228,18 +307,15 @@ async function handleRequest(request, response) {
 
       sendJson(response, 201, {
         message: 'Produk baru berhasil ditambahkan.',
-        data: createSnapshot(state)
+        data: await buildClientSnapshot(user, state)
       });
       return;
     }
 
     const restockMatch = matchRoute(url.pathname, new RegExp(`^${serverConfig.apiBasePath}/products/(\\d+)/restock$`));
     if (restockMatch && request.method === 'POST') {
-      const { user } = getSessionUser(request);
-      if (user.role !== 'admin') {
-        sendJson(response, 403, { message: 'Hanya admin yang boleh merestok produk.' });
-        return;
-      }
+      const { user } = await getSessionUser(request);
+      ensureAdmin(user);
 
       const body = await readJsonBody(request);
       const state = await restockProduct({
@@ -251,13 +327,13 @@ async function handleRequest(request, response) {
 
       sendJson(response, 200, {
         message: 'Restok produk berhasil disimpan.',
-        data: createSnapshot(state)
+        data: await buildClientSnapshot(user, state)
       });
       return;
     }
 
     if (url.pathname === `${serverConfig.apiBasePath}/transactions` && request.method === 'POST') {
-      const { user } = getSessionUser(request);
+      const { user } = await getSessionUser(request);
       const body = await readJsonBody(request);
       const result = await createTransaction({
         items: body.items,
@@ -268,7 +344,7 @@ async function handleRequest(request, response) {
       sendJson(response, 201, {
         message: 'Transaksi berhasil disimpan.',
         transaction: result.transaction,
-        data: createSnapshot(result.state)
+        data: await buildClientSnapshot(user, result.state)
       });
       return;
     }

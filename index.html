@@ -386,6 +386,23 @@
         .admin-note { margin-top: 14px; font-size: 12px; line-height: 1.6; display: flex; gap: 8px; padding: 12px 13px; border-radius: 14px; border: 1px solid rgba(97, 76, 62, 0.1); }
         .admin-note-warning { color: #8b6140; background: rgba(247, 240, 230, 0.92); }
         .admin-note-muted { color: var(--text-light); background: rgba(255,255,255,0.52); }
+        .user-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .user-list { display: grid; gap: 12px; margin-top: 16px; }
+        .user-list-empty { padding: 18px 14px; border-radius: 18px; background: rgba(255,255,255,0.48); border: 1px dashed rgba(97, 76, 62, 0.16); color: var(--text-light); font-size: 12px; text-align: center; }
+        .user-row { padding: 15px; border-radius: 20px; background: rgba(255,255,255,0.58); border: 1px solid rgba(97, 76, 62, 0.1); }
+        .user-row-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+        .user-row-title { min-width: 0; }
+        .user-row-title strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 4px; }
+        .user-row-title span { display: block; font-size: 12px; color: var(--text-light); word-break: break-word; }
+        .user-pill-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .user-pill { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+        .user-pill-role { background: rgba(210, 85, 63, 0.12); color: var(--primary-dark); }
+        .user-pill-status { background: rgba(98, 122, 92, 0.14); color: var(--success-dark); }
+        .user-pill-status.is-inactive { background: rgba(177, 103, 91, 0.14); color: #8f5046; }
+        .user-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .user-meta span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,0.6); border: 1px solid rgba(97, 76, 62, 0.08); font-size: 11px; color: var(--text-light); }
+        .user-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .user-action-btn { min-height: 44px; font-size: 12px; padding: 10px 12px; }
         .sync-status { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 15px; border-radius: 18px; background: rgba(255,255,255,0.6); border: 1px solid rgba(97, 76, 62, 0.1); margin-bottom: 16px; }
         .sync-status strong { display: block; font-size: 14px; color: var(--text); margin-bottom: 4px; }
         .sync-status span { font-size: 12px; line-height: 1.6; color: var(--text-light); }
@@ -487,7 +504,9 @@
             }
 
             .history-summary-overview,
-            .history-recap-grid {
+            .history-recap-grid,
+            .user-form-grid,
+            .user-actions {
                 grid-template-columns: 1fr;
             }
 
@@ -615,9 +634,9 @@
             </div>
             <button class="btn btn-primary btn-block login-submit" onclick="login()">Masuk <i class="fas fa-arrow-right"></i></button>
             <div class="login-demo">
-                <strong>Akses Demo:</strong><br>
-                Admin: <code>admin</code> / <code>123</code><br>
-                Kasir: <code>user</code> / <code>123</code>
+                <strong>Info login:</strong><br>
+                Mode backend: gunakan akun yang dibuat admin.<br>
+                Mode lokal/demo: <code>admin</code> / <code>123</code> atau <code>user</code> / <code>123</code>
                 <button id="install-app-btn" class="btn btn-success btn-block install-app-btn hidden" type="button" onclick="installApp()"><i class="fas fa-download"></i> Instal Aplikasi</button>
                 <span class="install-app-note">Agar bisa dipasang di HP, buka app ini lewat link HTTPS lalu tekan tombol instal.</span>
             </div>
@@ -760,6 +779,47 @@
                         </div>
 
                         <button id="restock-button" class="btn btn-success btn-block" onclick="restockProduct()" style="padding: 14px;"><i class="fas fa-truck-loading"></i> Restok Produk</button>
+                    </div>
+
+                    <div id="user-management-card" class="admin-card hidden">
+                        <div class="admin-card-head">
+                            <div class="admin-card-title">
+                                <i class="fas fa-users-gear"></i>
+                                <span>Kelola Pengguna</span>
+                            </div>
+                            <p class="admin-card-desc">Tambahkan kasir atau admin baru agar setiap orang bisa login dari device masing-masing ke data backend yang sama.</p>
+                        </div>
+
+                        <div class="user-form-grid">
+                            <div>
+                                <label for="new-user-login" class="form-label">Username login</label>
+                                <input type="text" id="new-user-login" class="form-control" placeholder="contoh: kasir2">
+                            </div>
+                            <div>
+                                <label for="new-user-role" class="form-label">Peran</label>
+                                <select id="new-user-role" class="form-control">
+                                    <option value="user">Kasir</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="new-user-display-name" class="form-label">Nama tampil</label>
+                                <input type="text" id="new-user-display-name" class="form-control" placeholder="contoh: Kasir Shift Pagi">
+                            </div>
+                            <div>
+                                <label for="new-user-password" class="form-label">Password awal</label>
+                                <input type="password" id="new-user-password" class="form-control" placeholder="minimal 3 karakter">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary btn-block" onclick="createUserAccount()" style="padding: 14px;"><i class="fas fa-user-plus"></i> Tambah Pengguna</button>
+
+                        <div class="admin-note admin-note-muted">
+                            <i class="fas fa-user-shield" style="margin-top: 2px;"></i>
+                            <span>Multi-user aktif saat aplikasi memakai backend publik. Admin bisa ubah role, nonaktifkan akun, dan reset password langsung dari daftar user.</span>
+                        </div>
+
+                        <div id="user-list" class="user-list"></div>
                     </div>
                 </div>
             </div>
@@ -1232,6 +1292,36 @@
             .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
     }
 
+    function normalizeBooleanFlag(value, fallback = true) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+
+        const normalized = String(value ?? '').trim().toLowerCase();
+        if (!normalized) return fallback;
+
+        return !['0', 'false', 'no', 'off', 'inactive'].includes(normalized);
+    }
+
+    function normalizeManagedUsers(items) {
+        if (!Array.isArray(items)) return [];
+
+        return items
+            .map((user, index) => {
+                const login = String(user.login ?? user.username ?? `user_${index + 1}`).trim().toLowerCase();
+
+                return {
+                    login,
+                    displayName: String(user.displayName ?? user.username ?? login).trim() || login,
+                    role: String(user.role ?? 'user').trim().toLowerCase() === 'admin' ? 'admin' : 'user',
+                    isActive: normalizeBooleanFlag(user.isActive, true),
+                    createdAt: parseTransactionDateInput(user.createdAt)?.toISOString() || '',
+                    updatedAt: parseTransactionDateInput(user.updatedAt)?.toISOString() || '',
+                    lastLoginAt: parseTransactionDateInput(user.lastLoginAt)?.toISOString() || ''
+                };
+            })
+            .filter((user) => user.login);
+    }
+
     function normalizePendingOperations(items) {
         if (!Array.isArray(items)) return [];
 
@@ -1324,6 +1414,39 @@
         info: { title: 'Informasi', icon: 'fa-circle-info', buttonClass: 'btn-primary' }
     };
 
+    function getUserDisplayName(user) {
+        return user?.username || user?.displayName || user?.login || 'User';
+    }
+
+    function applyCurrentUserProfile(user) {
+        currentUser = user ? { ...user } : null;
+
+        const userDisplay = document.getElementById('user-display');
+        const roleBadge = document.getElementById('role-badge');
+        const restockNav = document.getElementById('nav-restok');
+
+        if (userDisplay) {
+            userDisplay.innerText = currentUser ? getUserDisplayName(currentUser) : 'User';
+        }
+
+        if (roleBadge) {
+            roleBadge.innerText = currentUser?.role ? String(currentUser.role).toUpperCase() : '';
+        }
+
+        if (restockNav) {
+            restockNav.style.display = currentUser?.role === 'admin' ? 'flex' : 'none';
+        }
+    }
+
+    function getUserRoleLabel(role) {
+        return String(role ?? '').toLowerCase() === 'admin' ? 'Admin' : 'Kasir';
+    }
+
+    function formatOptionalDate(value, fallbackText) {
+        const parsedDate = parseTransactionDateInput(value);
+        return parsedDate ? formatTransactionDisplayDate(parsedDate) : fallbackText;
+    }
+
     // Icon mapping sederhana berdasarkan kata kunci nama produk
     const getIcon = (name) => {
         const normalizedName = String(name ?? '').toLowerCase();
@@ -1342,6 +1465,7 @@
     let syncConfig = normalizeSyncConfig(safeParseJSON(storageKeys.syncConfig, defaultSyncConfig));
     let syncPending = normalizePendingOperations(safeParseStorage(storageKeys.syncPending, []));
     let syncMeta = normalizeSyncMeta(safeParseJSON(storageKeys.syncMeta, defaultSyncMeta));
+    let managedUsers = [];
 
     document.addEventListener('DOMContentLoaded', () => {
         const userInput = document.getElementById('login-user');
@@ -1555,6 +1679,8 @@
         if (type === 'checkout') return 'fa-receipt';
         if (type === 'restock_product') return 'fa-truck-loading';
         if (type === 'add_product') return 'fa-box-open';
+        if (type === 'user_created') return 'fa-user-plus';
+        if (type === 'user_updated') return 'fa-user-gear';
         return 'fa-clock-rotate-left';
     }
 
@@ -1709,6 +1835,9 @@
         products = normalizeProducts(snapshot?.products ?? []);
         transactions = normalizeTransactions(snapshot?.transactions ?? []);
         activities = normalizeActivities(snapshot?.activities ?? []);
+        managedUsers = Array.isArray(snapshot?.users)
+            ? normalizeManagedUsers(snapshot.users)
+            : (isAdmin() ? managedUsers : []);
         reconcileCartWithProducts();
         refreshAllViews();
     }
@@ -1717,6 +1846,183 @@
         const result = await requestBackend('/bootstrap');
         applyBackendSnapshot(result.data);
         return result.data;
+    }
+
+    function clearCreateUserForm() {
+        const loginInput = document.getElementById('new-user-login');
+        const displayNameInput = document.getElementById('new-user-display-name');
+        const roleInput = document.getElementById('new-user-role');
+        const passwordInput = document.getElementById('new-user-password');
+
+        if (loginInput) loginInput.value = '';
+        if (displayNameInput) displayNameInput.value = '';
+        if (roleInput) roleInput.value = 'user';
+        if (passwordInput) passwordInput.value = '';
+    }
+
+    function findManagedUser(login) {
+        return managedUsers.find((user) => user.login === String(login ?? '').trim().toLowerCase()) || null;
+    }
+
+    function renderUserManagement() {
+        const card = document.getElementById('user-management-card');
+        const list = document.getElementById('user-list');
+
+        if (!card || !list) return;
+
+        const canManageUsers = isBackendEnabled() && isAdmin();
+        card.classList.toggle('hidden', !canManageUsers);
+
+        if (!canManageUsers) {
+            list.innerHTML = '';
+            return;
+        }
+
+        if (managedUsers.length === 0) {
+            list.innerHTML = '<div class="user-list-empty">Belum ada pengguna tambahan. Buat akun baru agar kasir atau admin lain bisa login dari device masing-masing.</div>';
+            return;
+        }
+
+        list.innerHTML = managedUsers.map((user) => {
+            const isCurrentSessionUser = currentUser?.login === user.login;
+            const nextRole = user.role === 'admin' ? 'user' : 'admin';
+            const nextActiveState = !user.isActive;
+
+            return `
+                <div class="user-row">
+                    <div class="user-row-head">
+                        <div class="user-row-title">
+                            <strong>${escapeHtml(user.displayName)}</strong>
+                            <span>@${escapeHtml(user.login)}</span>
+                        </div>
+                        <div class="user-pill-group">
+                            <span class="user-pill user-pill-role">${escapeHtml(getUserRoleLabel(user.role))}</span>
+                            <span class="user-pill user-pill-status ${user.isActive ? '' : 'is-inactive'}">${user.isActive ? 'Aktif' : 'Nonaktif'}</span>
+                        </div>
+                    </div>
+                    <div class="user-meta">
+                        <span><i class="fas fa-clock"></i> Login terakhir: ${escapeHtml(formatOptionalDate(user.lastLoginAt, 'belum pernah'))}</span>
+                        <span><i class="fas fa-user-plus"></i> Dibuat: ${escapeHtml(formatOptionalDate(user.createdAt, '-'))}</span>
+                        ${isCurrentSessionUser ? '<span><i class="fas fa-key"></i> Akun sesi aktif</span>' : ''}
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn ${user.isActive ? 'btn-danger' : 'btn-success'} user-action-btn" type="button" ${isCurrentSessionUser ? 'disabled' : ''} onclick='toggleUserActive(${JSON.stringify(user.login)}, ${JSON.stringify(nextActiveState)})'>
+                            <i class="fas ${user.isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+                        <button class="btn btn-primary user-action-btn" type="button" ${isCurrentSessionUser ? 'disabled' : ''} onclick='changeUserRole(${JSON.stringify(user.login)}, ${JSON.stringify(nextRole)})'>
+                            <i class="fas fa-user-shield"></i> ${user.role === 'admin' ? 'Jadi Kasir' : 'Jadi Admin'}
+                        </button>
+                        <button class="btn btn-success user-action-btn" type="button" onclick='resetUserPassword(${JSON.stringify(user.login)})'>
+                            <i class="fas fa-key"></i> Reset Password
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function updateBackendUser(login, payload, fallbackMessage) {
+        try {
+            const result = await requestBackend(`/admin/users/${encodeURIComponent(login)}`, {
+                method: 'PATCH',
+                body: payload
+            });
+
+            if (result.currentUser) {
+                applyCurrentUserProfile(result.currentUser);
+            }
+
+            applyBackendSnapshot(result.data);
+            showNotice(result.message || fallbackMessage, 'success', 'Pengguna Diperbarui');
+        } catch (error) {
+            showNotice(error.message || 'Perubahan pengguna tidak berhasil disimpan.', 'error', 'Update Gagal');
+        }
+    }
+
+    async function createUserAccount() {
+        if (!isBackendEnabled()) {
+            showNotice('Multi-user hanya tersedia saat backend publik sudah dikonfigurasi ke aplikasi.', 'warning', 'Backend Belum Aktif');
+            return;
+        }
+
+        if (!isAdmin()) {
+            showNotice('Hanya admin yang boleh menambah pengguna baru.', 'warning', 'Akses Ditolak');
+            return;
+        }
+
+        const login = document.getElementById('new-user-login')?.value.trim() || '';
+        const displayName = document.getElementById('new-user-display-name')?.value.trim() || '';
+        const role = document.getElementById('new-user-role')?.value || 'user';
+        const password = document.getElementById('new-user-password')?.value || '';
+
+        if (!login || !displayName || !password) {
+            showNotice('Username, nama tampil, dan password awal harus diisi.', 'warning', 'Data Belum Lengkap');
+            return;
+        }
+
+        try {
+            const result = await requestBackend('/admin/users', {
+                method: 'POST',
+                body: {
+                    login,
+                    displayName,
+                    role,
+                    password
+                }
+            });
+
+            if (result.currentUser) {
+                applyCurrentUserProfile(result.currentUser);
+            }
+
+            applyBackendSnapshot(result.data);
+            clearCreateUserForm();
+            showNotice(result.message || `Akun ${displayName} berhasil dibuat.`, 'success', 'Pengguna Ditambahkan');
+        } catch (error) {
+            showNotice(error.message || 'Akun baru tidak berhasil dibuat.', 'error', 'Tambah Pengguna Gagal');
+        }
+    }
+
+    async function toggleUserActive(login, nextIsActive) {
+        const user = findManagedUser(login);
+        if (!user) {
+            showNotice('Data pengguna tidak ditemukan.', 'error', 'Pengguna Hilang');
+            return;
+        }
+
+        await updateBackendUser(user.login, { isActive: nextIsActive }, nextIsActive
+            ? `Akun ${user.displayName} berhasil diaktifkan kembali.`
+            : `Akun ${user.displayName} berhasil dinonaktifkan.`);
+    }
+
+    async function changeUserRole(login, nextRole) {
+        const user = findManagedUser(login);
+        if (!user) {
+            showNotice('Data pengguna tidak ditemukan.', 'error', 'Pengguna Hilang');
+            return;
+        }
+
+        await updateBackendUser(user.login, { role: nextRole }, `Peran ${user.displayName} berhasil diubah menjadi ${getUserRoleLabel(nextRole)}.`);
+    }
+
+    async function resetUserPassword(login) {
+        const user = findManagedUser(login);
+        if (!user) {
+            showNotice('Data pengguna tidak ditemukan.', 'error', 'Pengguna Hilang');
+            return;
+        }
+
+        const nextPassword = window.prompt(`Masukkan password baru untuk ${user.displayName}:`, '');
+        if (nextPassword === null) {
+            return;
+        }
+
+        if (!String(nextPassword).trim()) {
+            showNotice('Password baru tidak boleh kosong.', 'warning', 'Password Belum Diisi');
+            return;
+        }
+
+        await updateBackendUser(user.login, { password: nextPassword }, `Password untuk ${user.displayName} berhasil diperbarui.`);
     }
 
     async function loginWithBackend(username, password) {
@@ -2038,7 +2344,7 @@
                 <div class="history-recap-head">
                     <div>
                         <h4 class="history-recap-title">Aktivitas Tersimpan</h4>
-                        <p class="history-recap-caption">Perubahan stok, produk, dan checkout terbaru yang ikut dibawa ke device lain.</p>
+                        <p class="history-recap-caption">Perubahan stok, checkout, dan pengelolaan akun terbaru yang ikut dibawa ke device lain.</p>
                     </div>
                     <span class="history-summary-icon"><i class="fas fa-clock-rotate-left"></i></span>
                 </div>
@@ -2324,9 +2630,9 @@
             }
         } else {
             if (user === 'admin' && pass === '123') {
-                currentUser = { username: 'Admin Utama', role: 'admin' };
+                currentUser = { login: 'admin', username: 'Admin Utama', role: 'admin' };
             } else if (user === 'user' && pass === '123') {
-                currentUser = { username: 'Kasir Shift 1', role: 'user' };
+                currentUser = { login: 'user', username: 'Kasir Shift 1', role: 'user' };
             } else {
                 showNotice("Username atau password salah!", 'error', 'Login Gagal');
                 return;
@@ -2336,9 +2642,7 @@
         securityReloginPendingNotice = false;
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-screen').classList.remove('hidden');
-        document.getElementById('user-display').innerText = currentUser.username;
-        document.getElementById('role-badge').innerText = currentUser.role.toUpperCase();
-        document.getElementById('nav-restok').style.display = isAdmin() ? 'flex' : 'none';
+        applyCurrentUserProfile(currentUser);
         document.getElementById('loading-overlay').classList.add('hidden');
         closeReceipt();
         switchView('kasir', document.querySelector('.nav-item'));
@@ -2361,15 +2665,14 @@
             void logoutFromBackend();
         }
 
-        currentUser = null;
+        managedUsers = [];
         cart = [];
         closeReceipt();
         resetPaymentInput();
         document.getElementById('loading-overlay').classList.add('hidden');
         document.getElementById('login-user').value = '';
         document.getElementById('login-pass').value = '';
-        document.getElementById('user-display').innerText = 'User';
-        document.getElementById('role-badge').innerText = '';
+        applyCurrentUserProfile(null);
         document.getElementById('main-screen').classList.add('hidden');
         document.getElementById('login-screen').classList.remove('hidden');
         switchView('kasir', document.querySelector('.nav-item'));
@@ -2412,6 +2715,7 @@
         renderKasir();
         renderStok();
         renderRestockOptions();
+        renderUserManagement();
         renderHistory();
         renderActivityLog();
         renderCart();

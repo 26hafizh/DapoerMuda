@@ -4,7 +4,7 @@ Aplikasi kasir mobile berbasis HTML, CSS, dan JavaScript dengan backend Node baw
 
 ## Fitur
 
-- Login admin dan kasir
+- Login multi-user untuk admin dan kasir
 - Transaksi penjualan
 - Manajemen stok dan restok
 - Riwayat transaksi
@@ -38,9 +38,25 @@ Owner aplikasi cukup mengatur sekali saat deploy:
   `DAPOERMUDA_API_BASE_URL`, `DAPOERMUDA_REQUEST_TIMEOUT_MS`
   `ADMIN_LOGIN`, `ADMIN_PASSWORD`, `ADMIN_DISPLAY_NAME`
   `CASHIER_LOGIN`, `CASHIER_PASSWORD`, `CASHIER_DISPLAY_NAME`
+  `APP_USERS_JSON`
 
 Secara default jika nilainya kosong, aplikasi berjalan di mode lokal/demo.
 Backend hanya aktif jika Anda mengisi `same-origin` atau URL backend publik yang benar.
+
+Saat backend aktif:
+
+- akun admin dan kasir default akan di-seed sekali ke database
+- admin bisa menambah, mengubah peran, menonaktifkan akun, dan reset password langsung dari aplikasi
+- `APP_USERS_JSON` bersifat opsional jika Anda ingin seed banyak akun sejak deploy awal
+
+Contoh file siap pakai untuk production:
+
+- [.env.railway.example](/c:/Users/hfz/Downloads/cihuy/.env.railway.example)
+- [users.seed.example.json](/c:/Users/hfz/Downloads/cihuy/users.seed.example.json)
+
+Untuk mengubah file user seed menjadi nilai `APP_USERS_JSON` yang siap ditempel ke Railway:
+
+`npm run users:env -- users.seed.example.json`
 
 ## Deploy Railway
 
@@ -53,6 +69,23 @@ Project ini sekarang sudah siap untuk dideploy sebagai satu service Node yang me
 5. Deploy, lalu pastikan health check `https://domain-anda/api/health` merespons `ok: true`.
 
 Setelah domain backend aktif, web yang dibuka dari domain itu akan langsung memakai backend yang sama tanpa config tambahan.
+
+## Setup Multi-User Production
+
+1. Salin isi [.env.railway.example](/c:/Users/hfz/Downloads/cihuy/.env.railway.example) ke variable Railway.
+2. Ganti semua password contoh dengan password production yang kuat.
+3. Jika ingin banyak akun sejak awal, edit [users.seed.example.json](/c:/Users/hfz/Downloads/cihuy/users.seed.example.json).
+4. Jalankan:
+   `npm run users:env -- users.seed.example.json`
+5. Tempel hasil JSON ke env `APP_USERS_JSON` di Railway.
+6. Deploy ulang service.
+7. Login sebagai admin utama dari aplikasi, lalu cek kartu `Kelola Pengguna` untuk tambah user lain jika dibutuhkan.
+
+Catatan:
+
+- seed user dari env hanya dipakai saat database user masih kosong
+- setelah database terisi, pengelolaan akun berikutnya dilakukan dari aplikasi oleh admin
+- semua HP akan berbagi data dan akun yang sama selama APK mengarah ke backend publik yang sama
 
 ## Instal di HP
 
@@ -89,6 +122,14 @@ Untuk mengunci URL backend ke APK:
 Untuk build final dengan backend publik:
 
 `powershell -ExecutionPolicy Bypass -File scripts/build-android-release.ps1 -ApiBaseUrl "https://dapoermuda-production.up.railway.app" -VersionName "1.0.0" -VersionCode 1`
+
+Alur production yang disarankan:
+
+1. Deploy backend ke Railway lebih dulu.
+2. Pastikan `https://domain-anda/api/health` merespons `ok: true`.
+3. Pastikan akun admin bisa login dan user seed muncul.
+4. Baru build APK final dengan URL Railway tersebut.
+5. Instal APK yang sama ke semua HP.
 
 Catatan:
 

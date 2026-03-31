@@ -1,0 +1,20 @@
+[
+  {
+    "login": "admincadangan",
+    "password": "GantiAdminCadangan123!",
+    "displayName": "Admin Cadangan",
+    "role": "admin"
+  },
+  {
+    "login": "kasirpagi",
+    "password": "GantiKasirPagi123!",
+    "displayName": "Kasir Shift Pagi",
+    "role": "user"
+  },
+  {
+    "login": "kasirsore",
+    "password": "GantiKasirSore123!",
+    "displayName": "Kasir Shift Sore",
+    "role": "user"
+  }
+]
