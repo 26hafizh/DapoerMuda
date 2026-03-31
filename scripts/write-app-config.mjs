@@ -37,8 +37,8 @@ function normalizeApiBaseUrl(value) {
   }
 }
 
-const inputUrl = process.argv[2] || process.env.DAPOERMUDA_API_BASE_URL || '';
-const normalizedApiBaseUrl = normalizeApiBaseUrl(inputUrl);
+const inputUrl = process.argv[2] || process.env.DAPOERMUDA_API_BASE_URL || 'same-origin';
+const normalizedApiBaseUrl = normalizeApiBaseUrl(inputUrl) || 'same-origin';
 const timeoutInput = process.env.DAPOERMUDA_REQUEST_TIMEOUT_MS || '12000';
 const requestTimeoutMs = Math.max(4000, Number(timeoutInput) || 12000);
 

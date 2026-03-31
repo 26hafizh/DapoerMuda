@@ -9,9 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DapoerMuda POS">
     <title>DapoerMuda POS</title>
-    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" href="icons/icon-512.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-512.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
@@ -160,7 +160,7 @@
         header::after { content: ""; position: absolute; inset: auto 20px 0; height: 1px; background: linear-gradient(90deg, rgba(214,177,122,0.4), rgba(214,177,122,0.06), rgba(255,255,255,0.08)); }
         .header-title { display: flex; align-items: center; gap: 12px; color: var(--paper-strong); min-width: 0; }
         .brand-mark { width: 56px; height: 56px; border-radius: 18px; background: rgba(251, 244, 236, 0.98); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 16px 24px rgba(0, 0, 0, 0.22); overflow: hidden; flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.08); }
-        .brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 4px; filter: drop-shadow(0 10px 14px rgba(28, 19, 16, 0.18)); }
         .brand-copy { min-width: 0; }
         .brand-name { display: block; font-size: 24px; font-weight: 700; letter-spacing: -0.04em; line-height: 0.92; color: var(--paper-strong); font-family: 'Fraunces', serif; }
         .brand-tagline { display: block; margin-top: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(251, 244, 236, 0.56); }
@@ -195,6 +195,191 @@
         .fade-in { animation: fadeIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(16px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+        #launch-overlay,
+        #screen-transition {
+            position: absolute;
+            inset: 10px;
+            border-radius: 28px;
+            overflow: hidden;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #launch-overlay.hidden,
+        #screen-transition.hidden { display: none !important; }
+        #launch-overlay::before,
+        #screen-transition::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(135deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 22px);
+            background-size: 28px 28px;
+            opacity: 0.24;
+        }
+        #launch-overlay {
+            background:
+                radial-gradient(circle at 22% 18%, rgba(236, 141, 106, 0.34), transparent 26%),
+                radial-gradient(circle at 80% 74%, rgba(101, 131, 68, 0.28), transparent 30%),
+                linear-gradient(155deg, #120e0d, #241916 46%, #38231b 100%);
+        }
+        #launch-overlay.is-leaving { animation: overlayFadeOut 0.62s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards; pointer-events: none; }
+        .launch-glow,
+        .transition-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(26px);
+            opacity: 0.72;
+            animation: drift 9s ease-in-out infinite;
+        }
+        .launch-glow-one,
+        .transition-glow-one {
+            width: 220px;
+            height: 220px;
+            background: rgba(236, 141, 106, 0.34);
+            top: 8%;
+            left: 10%;
+        }
+        .launch-glow-two,
+        .transition-glow-two {
+            width: 260px;
+            height: 260px;
+            background: rgba(101, 131, 68, 0.28);
+            right: 6%;
+            bottom: 10%;
+            animation-delay: -4.2s;
+        }
+        .launch-core,
+        .transition-core {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 320px);
+            text-align: center;
+            padding: 28px 24px;
+        }
+        .launch-mark,
+        .transition-mark {
+            width: clamp(122px, 30vw, 150px);
+            aspect-ratio: 1 / 1;
+            margin: 0 auto 20px;
+            padding: 14px;
+            border-radius: 34px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 24px 46px rgba(0, 0, 0, 0.34);
+            backdrop-filter: blur(12px);
+            animation: markPulse 3.6s ease-in-out infinite;
+        }
+        .launch-mark img,
+        .transition-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.18));
+        }
+        .launch-kicker,
+        .transition-kicker {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 999px;
+            margin-bottom: 14px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.14);
+            color: rgba(251, 244, 236, 0.82);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+        .launch-title,
+        .transition-title {
+            color: var(--paper-strong);
+            font-family: 'Fraunces', serif;
+            font-size: clamp(28px, 6vw, 34px);
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+            margin-bottom: 10px;
+            text-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+        }
+        .launch-copy,
+        .transition-copy {
+            color: rgba(251, 244, 236, 0.74);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .launch-core { animation: introRise 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        .launch-kicker,
+        .launch-title,
+        .launch-copy { animation: textFadeUp 0.9s ease both; }
+        .launch-title { animation-delay: 0.08s; }
+        .launch-copy { animation-delay: 0.16s; }
+        @keyframes introRise {
+            from { opacity: 0; transform: translateY(26px) scale(0.94); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes textFadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes overlayFadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(1.04); }
+        }
+        @keyframes markPulse {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-6px) scale(1.03); }
+        }
+
+        #screen-transition {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.02);
+            background:
+                radial-gradient(circle at 22% 20%, rgba(236, 141, 106, 0.22), transparent 24%),
+                radial-gradient(circle at 82% 78%, rgba(101, 131, 68, 0.22), transparent 28%),
+                linear-gradient(155deg, rgba(18, 14, 13, 0.96), rgba(37, 26, 22, 0.98));
+        }
+        #screen-transition[data-mode="logout"] {
+            background:
+                radial-gradient(circle at 24% 18%, rgba(101, 131, 68, 0.24), transparent 24%),
+                radial-gradient(circle at 84% 82%, rgba(225, 188, 122, 0.18), transparent 30%),
+                linear-gradient(155deg, rgba(13, 18, 15, 0.96), rgba(27, 36, 28, 0.98));
+        }
+        #screen-transition.is-active {
+            opacity: 1;
+            pointer-events: auto;
+            animation: transitionReveal 0.28s ease forwards;
+        }
+        #screen-transition.is-exit { animation: transitionHide 0.54s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards; }
+        .transition-ribbon {
+            position: absolute;
+            inset: auto 10% 12%;
+            height: 3px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(236, 141, 106, 0.18), rgba(255,255,255,0.8), rgba(101, 131, 68, 0.22));
+            filter: blur(1px);
+            opacity: 0.9;
+        }
+        .transition-core { opacity: 0; transform: translateY(20px) scale(0.96); }
+        #screen-transition.is-active .transition-core { animation: introRise 0.34s 0.04s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        #screen-transition.is-exit .transition-core { animation: transitionCoreOut 0.26s ease forwards; }
+        @keyframes transitionReveal {
+            from { opacity: 0; transform: scale(1.03); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes transitionHide {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(1.02); }
+        }
+        @keyframes transitionCoreOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(-10px) scale(1.03); }
+        }
+
         /* Login Screen */
         #login-screen { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; min-height: 0; padding: 18px; background: linear-gradient(180deg, #1d1614, #281d18 58%, #1a1412 100%); position: relative; z-index: 1; overflow-x: hidden; overflow-y: auto; border-radius: 28px; }
         #login-screen::before,
@@ -204,15 +389,36 @@
         .login-content { width: 100%; margin-block: auto; position: relative; z-index: 1; background: linear-gradient(180deg, var(--paper-strong), #f0e2d2); border-radius: 30px; padding: clamp(26px, 6vw, 34px); border: 1px solid rgba(255,255,255,0.45); box-shadow: 0 28px 60px rgba(0, 0, 0, 0.2); }
         .login-content::before { content: none; }
         .logo-login { text-align: center; margin-bottom: 12px; position: relative; z-index: 1; animation: float 4s ease-in-out infinite; }
-        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; border-radius: 30px; background: linear-gradient(180deg, #dcc3a1, #cfaf84); border: 1px solid rgba(112, 84, 52, 0.18); display: flex; align-items: center; justify-content: center; box-shadow: 0 16px 30px rgba(70, 49, 28, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.22); position: relative; transform: none; overflow: hidden; padding: 22px; }
+        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; border-radius: 34px; background: linear-gradient(180deg, #f8e8ca, #f0d7b4); border: 1px solid rgba(112, 84, 52, 0.18); display: flex; align-items: center; justify-content: center; box-shadow: 0 18px 34px rgba(70, 49, 28, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4); position: relative; transform: none; overflow: hidden; padding: 16px; }
         .logo-orb::after { content: none; }
-        .logo-orb img { width: 100%; height: 100%; object-fit: contain; display: block; position: static; transform: scale(0.86); }
+        .logo-orb img { width: 100%; height: 100%; object-fit: contain; display: block; position: static; transform: scale(0.96); filter: drop-shadow(0 16px 18px rgba(31, 22, 18, 0.14)); }
         .login-kicker { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--paper-strong); margin: 0 auto 16px; position: relative; z-index: 1; display: inline-flex; padding: 7px 12px; border-radius: 999px; background: var(--text); left: 50%; transform: translateX(-50%); }
         .login-title { text-align: center; color: var(--text); margin-bottom: 4px; font-size: clamp(28px, 6vw, 34px); line-height: 0.96; font-weight: 700; letter-spacing: -0.06em; position: relative; z-index: 1; font-family: 'Fraunces', serif; }
         .login-brand-meta { text-align: center; margin-bottom: 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(76, 55, 43, 0.56); position: relative; z-index: 1; }
         .login-subtitle { text-align: center; color: var(--text-light); margin-bottom: clamp(20px, 3vh, 28px); line-height: 1.7; font-size: clamp(13px, 3vw, 14px); position: relative; z-index: 1; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
         @keyframes pulseRing { 0% { transform: scale(0.92); opacity: 0.55; } 70% { transform: scale(1.08); opacity: 0; } 100% { opacity: 0; } }
+        #login-screen.is-awake .login-content { animation: loginPanelRise 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        #login-screen.is-awake .logo-login,
+        #login-screen.is-awake .login-title,
+        #login-screen.is-awake .login-brand-meta,
+        #login-screen.is-awake .login-kicker,
+        #login-screen.is-awake .login-subtitle,
+        #login-screen.is-awake .input-group,
+        #login-screen.is-awake .login-submit,
+        #login-screen.is-awake .login-demo { animation: textFadeUp 0.7s ease both; }
+        #login-screen.is-awake .login-title { animation-delay: 0.04s; }
+        #login-screen.is-awake .login-brand-meta { animation-delay: 0.08s; }
+        #login-screen.is-awake .login-kicker { animation-delay: 0.12s; }
+        #login-screen.is-awake .login-subtitle { animation-delay: 0.16s; }
+        #login-screen.is-awake .input-group:nth-of-type(1) { animation-delay: 0.22s; }
+        #login-screen.is-awake .input-group:nth-of-type(2) { animation-delay: 0.28s; }
+        #login-screen.is-awake .login-submit { animation-delay: 0.34s; }
+        #login-screen.is-awake .login-demo { animation-delay: 0.40s; }
+        @keyframes loginPanelRise {
+            from { opacity: 0; transform: translateY(24px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .input-group { margin-bottom: clamp(16px, 2.2vh, 20px); }
         .input-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-light); }
         .input-group input { width: 100%; padding: clamp(14px, 2.2vh, 16px) 18px; border: 2px solid rgba(210, 85, 63, 0.12); border-radius: 18px; font-size: 16px; outline: none; transition: 0.3s; background: rgba(255,255,255,0.74); box-shadow: inset 0 1px 0 rgba(255,255,255,0.64); }
@@ -448,6 +654,12 @@
                 border-radius: 24px 24px 18px 18px;
             }
 
+            #launch-overlay,
+            #screen-transition {
+                inset: 8px;
+                border-radius: 24px;
+            }
+
             #login-screen {
                 padding: max(12px, calc(12px + var(--safe-top) * 0.35)) 12px max(12px, calc(12px + var(--safe-bottom) * 0.35));
             }
@@ -551,6 +763,14 @@
             }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+            #launch-overlay,
+            #screen-transition,
+            .logo-login {
+                animation: none !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -579,6 +799,33 @@
     <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>
         <h3 style="color: var(--primary-dark); font-weight: 700; letter-spacing: -0.02em;">Meracik transaksi...</h3>
+    </div>
+
+    <div id="launch-overlay">
+        <span class="launch-glow launch-glow-one"></span>
+        <span class="launch-glow launch-glow-two"></span>
+        <div class="launch-core">
+            <div class="launch-mark">
+                <img src="icons/icon-512.png" alt="Logo DapoerMuda">
+            </div>
+            <p class="launch-kicker">DapoerMuda POS</p>
+            <h2 class="launch-title">Masuk ke dapur transaksi yang lebih hidup</h2>
+            <p class="launch-copy">Mempersiapkan kasir, stok, dan sinkronisasi backend agar siap dipakai di device mana pun.</p>
+        </div>
+    </div>
+
+    <div id="screen-transition" class="hidden" aria-hidden="true">
+        <span class="transition-glow transition-glow-one"></span>
+        <span class="transition-glow transition-glow-two"></span>
+        <div class="transition-core">
+            <div class="transition-mark">
+                <img src="icons/icon-512.png" alt="Logo DapoerMuda">
+            </div>
+            <p id="transition-kicker" class="transition-kicker">Menyiapkan DapoerMuda</p>
+            <h2 id="transition-title" class="transition-title">Masuk ke ruang kerja kasir</h2>
+            <p id="transition-copy" class="transition-copy">Sedang mengatur ulang tampilan agar perpindahan terasa lebih mulus.</p>
+        </div>
+        <span class="transition-ribbon"></span>
     </div>
 
     <div id="receipt-modal">
@@ -617,7 +864,7 @@
         <div class="login-content">
             <div class="logo-login">
                 <div class="logo-orb">
-                    <img src="icons/icon-192.png" alt="Logo DapoerMuda">
+                    <img src="icons/icon-512.png" alt="Logo DapoerMuda">
                 </div>
             </div>
             <h1 class="login-title">DapoerMuda</h1>
@@ -647,7 +894,7 @@
         <header>
             <div class="header-title">
                 <div class="brand-mark">
-                    <img src="icons/icon-192.png" alt="Logo DapoerMuda">
+                    <img src="icons/icon-512.png" alt="Logo DapoerMuda">
                 </div>
                 <div class="brand-copy">
                     <span class="brand-name">DapoerMuda</span>
@@ -1466,6 +1713,8 @@
     let syncPending = normalizePendingOperations(safeParseStorage(storageKeys.syncPending, []));
     let syncMeta = normalizeSyncMeta(safeParseJSON(storageKeys.syncMeta, defaultSyncMeta));
     let managedUsers = [];
+    let launchAnimationPlayed = false;
+    let authTransitionBusy = false;
 
     document.addEventListener('DOMContentLoaded', () => {
         const userInput = document.getElementById('login-user');
@@ -1531,6 +1780,106 @@
         await installPromptEvent.userChoice;
         installPromptEvent = null;
         updateInstallButtonVisibility();
+    }
+
+    function prefersReducedMotion() {
+        return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function waitForMs(duration) {
+        return new Promise((resolve) => window.setTimeout(resolve, duration));
+    }
+
+    function revealLoginScreen() {
+        const loginScreen = document.getElementById('login-screen');
+        if (!loginScreen) return;
+
+        loginScreen.classList.remove('is-awake');
+        void loginScreen.offsetWidth;
+        loginScreen.classList.add('is-awake');
+    }
+
+    async function playLaunchAnimation() {
+        const overlay = document.getElementById('launch-overlay');
+        if (!overlay || launchAnimationPlayed) {
+            revealLoginScreen();
+            return;
+        }
+
+        launchAnimationPlayed = true;
+
+        if (prefersReducedMotion()) {
+            overlay.classList.add('hidden');
+            revealLoginScreen();
+            return;
+        }
+
+        await waitForMs(1350);
+        overlay.classList.add('is-leaving');
+        await waitForMs(620);
+        overlay.classList.add('hidden');
+        overlay.classList.remove('is-leaving');
+        revealLoginScreen();
+    }
+
+    function getAuthTransitionCopy(mode) {
+        if (mode === 'logout') {
+            return {
+                kicker: 'Menutup sesi kerja',
+                title: 'Sampai jumpa, kasir andalan',
+                copy: 'Mengunci ulang akses agar akun tetap aman sebelum perangkat dipakai lagi.'
+            };
+        }
+
+        return {
+            kicker: 'Menyiapkan DapoerMuda',
+            title: 'Masuk ke ruang kerja kasir',
+            copy: 'Menghubungkan profil, stok, dan transaksi agar semuanya siap dipakai.'
+        };
+    }
+
+    async function playAuthTransition(mode, swapScreens) {
+        if (typeof swapScreens !== 'function') return;
+
+        const overlay = document.getElementById('screen-transition');
+        const kicker = document.getElementById('transition-kicker');
+        const title = document.getElementById('transition-title');
+        const copy = document.getElementById('transition-copy');
+
+        if (!overlay || !kicker || !title || !copy || prefersReducedMotion() || authTransitionBusy) {
+            await swapScreens();
+            if (mode === 'logout') {
+                revealLoginScreen();
+            }
+            return;
+        }
+
+        authTransitionBusy = true;
+
+        try {
+            const transitionCopy = getAuthTransitionCopy(mode);
+            kicker.textContent = transitionCopy.kicker;
+            title.textContent = transitionCopy.title;
+            copy.textContent = transitionCopy.copy;
+            overlay.dataset.mode = mode;
+            overlay.classList.remove('hidden', 'is-exit');
+            overlay.classList.add('is-active');
+
+            await waitForMs(260);
+            await swapScreens();
+            if (mode === 'logout') {
+                revealLoginScreen();
+            }
+
+            overlay.classList.remove('is-active');
+            overlay.classList.add('is-exit');
+            await waitForMs(540);
+            overlay.classList.add('hidden');
+            overlay.classList.remove('is-exit');
+            delete overlay.dataset.mode;
+        } finally {
+            authTransitionBusy = false;
+        }
     }
 
     function registerServiceWorker() {
@@ -2553,6 +2902,7 @@
         }
 
         refreshAllViews();
+        void playLaunchAnimation();
     }
 
     window.addEventListener('online', () => {
@@ -2640,14 +2990,16 @@
         }
 
         securityReloginPendingNotice = false;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-screen').classList.remove('hidden');
-        applyCurrentUserProfile(currentUser);
-        document.getElementById('loading-overlay').classList.add('hidden');
-        closeReceipt();
-        switchView('kasir', document.querySelector('.nav-item'));
-        scrollActivePageToTop();
-        updateSyncPanel();
+        await playAuthTransition('login', async () => {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            applyCurrentUserProfile(currentUser);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            closeReceipt();
+            switchView('kasir', document.querySelector('.nav-item'));
+            scrollActivePageToTop();
+            updateSyncPanel();
+        });
 
         if (loginResult?.seededFromLocal) {
             showNotice('Data lokal lama berhasil dipindahkan ke backend dan sekarang menjadi sumber data utama.', 'success', 'Backend Siap');
@@ -2660,24 +3012,26 @@
         }
     }
 
-    function logout() {
+    async function logout() {
         if (isBackendEnabled()) {
             void logoutFromBackend();
         }
 
-        managedUsers = [];
-        cart = [];
-        closeReceipt();
-        resetPaymentInput();
-        document.getElementById('loading-overlay').classList.add('hidden');
-        document.getElementById('login-user').value = '';
-        document.getElementById('login-pass').value = '';
-        applyCurrentUserProfile(null);
-        document.getElementById('main-screen').classList.add('hidden');
-        document.getElementById('login-screen').classList.remove('hidden');
-        switchView('kasir', document.querySelector('.nav-item'));
-        scrollActivePageToTop();
-        updateSyncPanel();
+        await playAuthTransition('logout', async () => {
+            managedUsers = [];
+            cart = [];
+            closeReceipt();
+            resetPaymentInput();
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            applyCurrentUserProfile(null);
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            switchView('kasir', document.querySelector('.nav-item'));
+            scrollActivePageToTop();
+            updateSyncPanel();
+        });
     }
 
     // --- Navigasi Tab ---

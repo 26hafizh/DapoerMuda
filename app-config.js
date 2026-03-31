@@ -2,6 +2,6 @@
 // Owner can set DAPOERMUDA_API_BASE_URL before building web or Android assets.
 // Use "same-origin" when the web app and API are served from the same domain.
 window.DAPOERMUDA_APP_CONFIG = Object.assign({
-  apiBaseUrl: "https://dapoermuda-production.up.railway.app/api",
+  apiBaseUrl: "same-origin",
   requestTimeoutMs: 12000
 }, window.DAPOERMUDA_APP_CONFIG || {});
