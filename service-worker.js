@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dapoermuda-pos-v5';
+const CACHE_NAME = 'dapoermuda-pos-v6';
 const APP_SHELL = [
   './',
   './app-config.js',

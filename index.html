@@ -265,7 +265,7 @@
             width: clamp(122px, 30vw, 150px);
             aspect-ratio: 1 / 1;
             margin: 0 auto 20px;
-            padding: 14px;
+            padding: 10px;
             border-radius: 34px;
             background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -274,10 +274,12 @@
         }
         .launch-mark img,
         .transition-mark img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+            width: auto;
+            height: 108%;
+            max-width: none;
+            object-fit: cover;
             display: block;
+            transform: scale(1.05);
             filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.18));
         }
         .launch-kicker,
@@ -390,9 +392,9 @@
         .login-content { width: 100%; margin-block: auto; position: relative; z-index: 1; background: linear-gradient(180deg, var(--paper-strong), #f0e2d2); border-radius: 30px; padding: clamp(26px, 6vw, 34px); border: 1px solid rgba(255,255,255,0.45); box-shadow: 0 28px 60px rgba(0, 0, 0, 0.2); }
         .login-content::before { content: none; }
         .logo-login { text-align: center; margin-bottom: 12px; position: relative; z-index: 1; animation: float 6s ease-in-out infinite; }
-        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; border-radius: 34px; background: linear-gradient(180deg, #f8e8ca, #f0d7b4); border: 1px solid rgba(112, 84, 52, 0.18); display: flex; align-items: center; justify-content: center; box-shadow: 0 18px 34px rgba(70, 49, 28, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4); position: relative; transform: none; overflow: hidden; padding: 16px; }
+        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; border-radius: 34px; background: linear-gradient(180deg, #f8e8ca, #f0d7b4); border: 1px solid rgba(112, 84, 52, 0.18); display: flex; align-items: center; justify-content: center; box-shadow: 0 18px 34px rgba(70, 49, 28, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4); position: relative; transform: none; overflow: hidden; padding: 8px; }
         .logo-orb::after { content: none; }
-        .logo-orb img { width: 100%; height: 100%; object-fit: contain; display: block; position: static; transform: scale(0.96); filter: drop-shadow(0 16px 18px rgba(31, 22, 18, 0.14)); }
+        .logo-orb img { width: auto; height: 118%; max-width: none; object-fit: cover; display: block; position: static; transform: scale(1.04); filter: drop-shadow(0 16px 18px rgba(31, 22, 18, 0.14)); }
         .login-kicker { width: fit-content; max-width: min(100%, 320px); text-align: center; justify-content: center; line-height: 1.35; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-strong); margin: 0 auto 16px; position: relative; z-index: 1; display: flex; padding: 8px 14px; border-radius: 999px; background: var(--text); }
         .login-title { text-align: center; color: var(--text); margin-bottom: 4px; font-size: clamp(28px, 6vw, 34px); line-height: 0.96; font-weight: 700; letter-spacing: -0.06em; position: relative; z-index: 1; font-family: 'Fraunces', serif; }
         .login-brand-meta { text-align: center; margin-bottom: 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(76, 55, 43, 0.56); position: relative; z-index: 1; }

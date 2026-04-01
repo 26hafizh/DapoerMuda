@@ -241,7 +241,7 @@ def build_adaptive_foreground(size: int, mark: Image.Image) -> Image.Image:
 
 
 def build_ui_mark(size: int, mark: Image.Image) -> Image.Image:
-    return fit_mark(mark, size, padding_ratio=0.04)
+    return fit_mark(mark, size, padding_ratio=0.0)
 
 
 def build_splash(size: tuple[int, int], mark: Image.Image) -> Image.Image:
