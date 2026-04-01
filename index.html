@@ -161,8 +161,8 @@
         header::before { content: ""; position: absolute; top: 0; left: 24px; width: 104px; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent-gold)); }
         header::after { content: ""; position: absolute; inset: auto 20px 0; height: 1px; background: linear-gradient(90deg, rgba(214,177,122,0.4), rgba(214,177,122,0.06), rgba(255,255,255,0.08)); }
         .header-title { display: flex; align-items: center; gap: 12px; color: var(--paper-strong); min-width: 0; }
-        .brand-mark { width: 56px; height: 56px; border-radius: 18px; background: rgba(251, 244, 236, 0.98); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 16px 24px rgba(0, 0, 0, 0.22); overflow: hidden; flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.08); }
-        .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 4px; filter: drop-shadow(0 10px 14px rgba(28, 19, 16, 0.18)); }
+        .brand-mark { width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 10px 14px rgba(28, 19, 16, 0.18)); }
         .brand-copy { min-width: 0; }
         .brand-name { display: block; font-size: 24px; font-weight: 700; letter-spacing: -0.04em; line-height: 0.92; color: var(--paper-strong); font-family: 'Fraunces', serif; }
         .brand-tagline { display: block; margin-top: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(251, 244, 236, 0.56); }
@@ -262,25 +262,21 @@
         }
         .launch-mark,
         .transition-mark {
-            width: clamp(122px, 30vw, 150px);
+            width: clamp(132px, 32vw, 164px);
             aspect-ratio: 1 / 1;
             margin: 0 auto 20px;
-            padding: 10px;
-            border-radius: 34px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             animation: markPulse 3.6s ease-in-out infinite;
         }
         .launch-mark img,
         .transition-mark img {
-            width: auto;
-            height: 108%;
-            max-width: none;
-            object-fit: cover;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
             display: block;
-            transform: scale(1.05);
-            filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.18));
+            filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.18));
         }
         .launch-kicker,
         .transition-kicker {
@@ -392,9 +388,9 @@
         .login-content { width: 100%; margin-block: auto; position: relative; z-index: 1; background: linear-gradient(180deg, var(--paper-strong), #f0e2d2); border-radius: 30px; padding: clamp(26px, 6vw, 34px); border: 1px solid rgba(255,255,255,0.45); box-shadow: 0 28px 60px rgba(0, 0, 0, 0.2); }
         .login-content::before { content: none; }
         .logo-login { text-align: center; margin-bottom: 12px; position: relative; z-index: 1; animation: float 6s ease-in-out infinite; }
-        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; border-radius: 34px; background: linear-gradient(180deg, #f8e8ca, #f0d7b4); border: 1px solid rgba(112, 84, 52, 0.18); display: flex; align-items: center; justify-content: center; box-shadow: 0 18px 34px rgba(70, 49, 28, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4); position: relative; transform: none; overflow: hidden; padding: 8px; }
+        .logo-orb { width: clamp(132px, 32vw, 156px); aspect-ratio: 1 / 1; margin: 0 auto; display: flex; align-items: center; justify-content: center; position: relative; transform: none; }
         .logo-orb::after { content: none; }
-        .logo-orb img { width: auto; height: 118%; max-width: none; object-fit: cover; display: block; position: static; transform: scale(1.04); filter: drop-shadow(0 16px 18px rgba(31, 22, 18, 0.14)); }
+        .logo-orb img { width: 100%; height: 100%; object-fit: contain; display: block; position: static; filter: drop-shadow(0 18px 22px rgba(31, 22, 18, 0.16)); }
         .login-kicker { width: fit-content; max-width: min(100%, 320px); text-align: center; justify-content: center; line-height: 1.35; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-strong); margin: 0 auto 16px; position: relative; z-index: 1; display: flex; padding: 8px 14px; border-radius: 999px; background: var(--text); }
         .login-title { text-align: center; color: var(--text); margin-bottom: 4px; font-size: clamp(28px, 6vw, 34px); line-height: 0.96; font-weight: 700; letter-spacing: -0.06em; position: relative; z-index: 1; font-family: 'Fraunces', serif; }
         .login-brand-meta { text-align: center; margin-bottom: 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(76, 55, 43, 0.56); position: relative; z-index: 1; }
@@ -675,13 +671,10 @@
             .brand-mark {
                 width: 50px;
                 height: 50px;
-                border-radius: 16px;
             }
 
             .logo-orb {
                 width: 128px;
-                padding: 16px;
-                border-radius: 26px;
             }
 
             .section-title {

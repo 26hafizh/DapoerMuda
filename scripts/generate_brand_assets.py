@@ -225,20 +225,7 @@ def build_launcher_icon(size: int, mark: Image.Image) -> Image.Image:
     stripe_layer = stripe_layer.filter(ImageFilter.GaussianBlur(max(1, size // 300)))
     icon.alpha_composite(stripe_layer)
 
-    card_margin = round(size * 0.08)
-    card = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    card_draw = ImageDraw.Draw(card)
-    card_draw.rounded_rectangle(
-        (card_margin, card_margin, size - card_margin, size - card_margin),
-        radius=round(size * 0.18),
-        fill=(255, 255, 255, 124),
-        outline=(255, 255, 255, 156),
-        width=max(3, size // 96),
-    )
-    card = card.filter(ImageFilter.GaussianBlur(max(1, size // 256)))
-    icon.alpha_composite(card)
-
-    mark_layer = fit_mark(mark, size, padding_ratio=0.14)
+    mark_layer = fit_mark(mark, size, padding_ratio=0.06)
     icon.alpha_composite(mark_layer)
 
     border = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -253,11 +240,11 @@ def build_launcher_icon(size: int, mark: Image.Image) -> Image.Image:
 
 
 def build_adaptive_foreground(size: int, mark: Image.Image) -> Image.Image:
-    return fit_mark(mark, size, padding_ratio=0.18)
+    return fit_mark(mark, size, padding_ratio=0.08)
 
 
 def build_monochrome_foreground(size: int, mark: Image.Image) -> Image.Image:
-    foreground = fit_mark(mark, size, padding_ratio=0.18, include_shadow=False)
+    foreground = fit_mark(mark, size, padding_ratio=0.08, include_shadow=False)
     alpha = foreground.getchannel("A")
     monochrome = Image.new("RGBA", (size, size), PALETTE["white"])
     monochrome.putalpha(alpha)
@@ -265,7 +252,7 @@ def build_monochrome_foreground(size: int, mark: Image.Image) -> Image.Image:
 
 
 def build_ui_mark(size: int, mark: Image.Image) -> Image.Image:
-    return fit_mark(mark, size, padding_ratio=0.0)
+    return ImageOps.contain(mark, (size, size), Image.Resampling.LANCZOS)
 
 
 def build_splash(size: tuple[int, int], mark: Image.Image) -> Image.Image:
@@ -288,20 +275,9 @@ def build_splash(size: tuple[int, int], mark: Image.Image) -> Image.Image:
         round(min(size) * 0.12),
     )
 
-    mark_size = round(min(size) * 0.46)
+    mark_size = round(min(size) * 0.52)
     mark_layer = fit_mark(mark, mark_size, padding_ratio=0.06)
-    mark_shell = Image.new("RGBA", (mark_size, mark_size), (0, 0, 0, 0))
-    shell_draw = ImageDraw.Draw(mark_shell)
-    shell_draw.rounded_rectangle(
-        (round(mark_size * 0.08), round(mark_size * 0.08), round(mark_size * 0.92), round(mark_size * 0.92)),
-        radius=round(mark_size * 0.2),
-        fill=(255, 255, 255, 18),
-        outline=(255, 255, 255, 34),
-        width=max(2, mark_size // 120),
-    )
-    mark_shell = mark_shell.filter(ImageFilter.GaussianBlur(max(1, mark_size // 180)))
-    splash.alpha_composite(mark_shell, ((width - mark_size) // 2, round(height * 0.14)))
-    splash.alpha_composite(mark_layer, ((width - mark_size) // 2, round(height * 0.14)))
+    splash.alpha_composite(mark_layer, ((width - mark_size) // 2, round(height * 0.13)))
 
     try:
         title_font = ImageFont.truetype(r"C:\Windows\Fonts\georgiab.ttf", max(24, round(min(size) * 0.09)))
