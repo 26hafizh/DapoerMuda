@@ -143,13 +143,16 @@ def add_drop_shadow(
     return canvas
 
 
-def load_brand_mark() -> Image.Image:
+def load_logo_source() -> Image.Image:
     if not SOURCE_LOGO_PATH.exists():
         raise FileNotFoundError(f"Logo source not found: {SOURCE_LOGO_PATH}")
 
     with Image.open(SOURCE_LOGO_PATH) as raw_image:
-        image = ImageOps.exif_transpose(raw_image).convert("RGBA")
+        return ImageOps.exif_transpose(raw_image).convert("RGBA")
 
+
+def load_brand_mark(source_logo: Image.Image) -> Image.Image:
+    image = source_logo.copy()
     image = strip_edge_background(image)
     bbox = image.getbbox()
     if bbox is None:
@@ -195,52 +198,13 @@ def apply_rounded_mask(image: Image.Image, radius_ratio: float) -> Image.Image:
 
 
 def build_launcher_icon(size: int, mark: Image.Image) -> Image.Image:
-    icon = vertical_gradient(
-        (size, size),
-        PALETTE["paper_top"],
-        PALETTE["paper_bottom"],
-    )
-    draw_glow(
-        icon,
-        (size * 0.06, size * 0.06, size * 0.74, size * 0.58),
-        mix(PALETTE["orange_soft"], PALETTE["white"], 0.12),
-        round(size * 0.08),
-    )
-    draw_glow(
-        icon,
-        (size * 0.34, size * 0.48, size * 0.98, size * 0.98),
-        mix(PALETTE["green"], PALETTE["white"], 0.08),
-        round(size * 0.09),
-    )
-
-    stripe_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    stripe_draw = ImageDraw.Draw(stripe_layer)
-    stripe_step = max(18, size // 18)
-    for offset in range(-size, size, stripe_step):
-        stripe_draw.line(
-            (offset, 0, offset + size, size),
-            fill=(255, 255, 255, 14),
-            width=max(1, size // 220),
-        )
-    stripe_layer = stripe_layer.filter(ImageFilter.GaussianBlur(max(1, size // 300)))
-    icon.alpha_composite(stripe_layer)
-
-    mark_layer = fit_mark(mark, size, padding_ratio=0.06)
-    icon.alpha_composite(mark_layer)
-
-    border = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(border).rounded_rectangle(
-        (3, 3, size - 4, size - 4),
-        radius=round(size * 0.23),
-        outline=(255, 255, 255, 48),
-        width=max(3, size // 110),
-    )
-    icon.alpha_composite(border)
-    return apply_rounded_mask(icon, radius_ratio=0.24)
+    icon = Image.new("RGBA", (size, size), (0, 0, 0, 255))
+    icon.alpha_composite(fit_mark(mark, size, padding_ratio=0.07, include_shadow=False))
+    return icon
 
 
 def build_adaptive_foreground(size: int, mark: Image.Image) -> Image.Image:
-    return fit_mark(mark, size, padding_ratio=0.08)
+    return fit_mark(mark, size, padding_ratio=0.07, include_shadow=False)
 
 
 def build_monochrome_foreground(size: int, mark: Image.Image) -> Image.Image:
@@ -309,7 +273,8 @@ def save_png(image: Image.Image, path: Path) -> None:
 
 
 def main() -> None:
-    mark = load_brand_mark()
+    source_logo = load_logo_source()
+    mark = load_brand_mark(source_logo)
 
     brand_mark = build_ui_mark(1024, mark)
     save_png(brand_mark, ICONS_DIR / "brand-mark.png")

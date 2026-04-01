@@ -2,6 +2,15 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.jdt.ls.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
     "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:\\Program Files\\Android\\Android Studio\\jbr",
+            "default": true
+        }
+    ],
+    "jdk.jdkhome": "C:\\Program Files\\Android\\Android Studio\\jbr",
+    "jdk.project.jdkhome": "C:\\Program Files\\Android\\Android Studio\\jbr",
     "java.errors.incompleteClasspath.severity": "ignore",
     "java.import.exclusions": [
         "**/build/**",
