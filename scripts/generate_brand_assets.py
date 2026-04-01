@@ -32,6 +32,20 @@ LAUNCHER_SIZES = {
     "mipmap-xxxhdpi": 192,
 }
 
+SPLASH_SIZES = {
+    "drawable-nodpi": (1080, 1920),
+    "drawable-port-mdpi": (320, 480),
+    "drawable-port-hdpi": (480, 720),
+    "drawable-port-xhdpi": (640, 960),
+    "drawable-port-xxhdpi": (960, 1440),
+    "drawable-port-xxxhdpi": (1280, 1920),
+    "drawable-land-mdpi": (480, 320),
+    "drawable-land-hdpi": (720, 480),
+    "drawable-land-xhdpi": (960, 640),
+    "drawable-land-xxhdpi": (1440, 960),
+    "drawable-land-xxxhdpi": (1920, 1280),
+}
+
 
 def lerp(start: int, end: int, amount: float) -> int:
     return round(start + ((end - start) * amount))
@@ -146,21 +160,23 @@ def load_brand_mark() -> Image.Image:
     return image
 
 
-def fit_mark(mark: Image.Image, size: int, padding_ratio: float) -> Image.Image:
+def fit_mark(mark: Image.Image, size: int, padding_ratio: float, include_shadow: bool = True) -> Image.Image:
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     usable = max(1, round(size * (1 - (padding_ratio * 2))))
     resized = ImageOps.contain(mark, (usable, usable), Image.Resampling.LANCZOS)
 
-    shadow_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     position = ((size - resized.width) // 2, (size - resized.height) // 2)
-    shadow_layer.alpha_composite(resized, position)
-    shadow_layer = add_drop_shadow(
-        shadow_layer,
-        blur_radius=max(4, size // 54),
-        opacity=92,
-        offset=(max(2, size // 120), max(4, size // 72)),
-    )
-    canvas.alpha_composite(shadow_layer)
+    if include_shadow:
+        shadow_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        shadow_layer.alpha_composite(resized, position)
+        shadow_layer = add_drop_shadow(
+            shadow_layer,
+            blur_radius=max(4, size // 54),
+            opacity=92,
+            offset=(max(2, size // 120), max(4, size // 72)),
+        )
+        canvas.alpha_composite(shadow_layer)
+
     canvas.alpha_composite(resized, position)
     return canvas
 
@@ -238,6 +254,14 @@ def build_launcher_icon(size: int, mark: Image.Image) -> Image.Image:
 
 def build_adaptive_foreground(size: int, mark: Image.Image) -> Image.Image:
     return fit_mark(mark, size, padding_ratio=0.18)
+
+
+def build_monochrome_foreground(size: int, mark: Image.Image) -> Image.Image:
+    foreground = fit_mark(mark, size, padding_ratio=0.18, include_shadow=False)
+    alpha = foreground.getchannel("A")
+    monochrome = Image.new("RGBA", (size, size), PALETTE["white"])
+    monochrome.putalpha(alpha)
+    return monochrome
 
 
 def build_ui_mark(size: int, mark: Image.Image) -> Image.Image:
@@ -320,17 +344,18 @@ def main() -> None:
     save_png(icon_1024.resize((512, 512), Image.Resampling.LANCZOS), ICONS_DIR / "icon-maskable-512.png")
 
     adaptive_foreground = build_adaptive_foreground(1024, mark)
+    monochrome_foreground = build_monochrome_foreground(1024, mark)
     for folder, size in LAUNCHER_SIZES.items():
         icon = icon_1024.resize((size, size), Image.Resampling.LANCZOS)
         foreground = adaptive_foreground.resize((size, size), Image.Resampling.LANCZOS)
+        monochrome = monochrome_foreground.resize((size, size), Image.Resampling.LANCZOS)
         save_png(icon, ANDROID_RES_DIR / folder / "ic_launcher.png")
-        save_png(icon, ANDROID_RES_DIR / folder / "ic_launcher_round.png")
         save_png(foreground, ANDROID_RES_DIR / folder / "ic_launcher_foreground.png")
+        save_png(monochrome, ANDROID_RES_DIR / folder / "ic_launcher_monochrome.png")
 
-    for splash_path in ANDROID_RES_DIR.glob("drawable*/splash.png"):
-        with Image.open(splash_path) as current:
-            generated = build_splash(current.size, mark)
-        save_png(generated, splash_path)
+    for folder, size in SPLASH_SIZES.items():
+        generated = build_splash(size, mark)
+        save_png(generated, ANDROID_RES_DIR / folder / "splash.png")
 
 
 if __name__ == "__main__":

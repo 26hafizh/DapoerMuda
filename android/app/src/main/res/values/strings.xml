@@ -1,7 +1,4 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DapoerMuda POS</string>
-    <string name="title_activity_main">DapoerMuda POS</string>
-    <string name="package_name">com.hfz.dapoermudapos</string>
-    <string name="custom_url_scheme">com.hfz.dapoermudapos</string>
 </resources>
