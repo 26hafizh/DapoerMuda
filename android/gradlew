@@ -133,13 +133,29 @@ Please set the JAVA_HOME variable in your environment to match the
 location of your Java installation."
     fi
 else
-    JAVACMD=java
-    if ! command -v java >/dev/null 2>&1
-    then
-        die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+    for candidate in \
+        "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+        "/opt/android-studio/jbr" \
+        "/usr/local/android-studio/jbr" \
+        "/mnt/c/Program Files/Android/Android Studio/jbr" \
+        "/c/Program Files/Android/Android Studio/jbr"
+    do
+        if [ -x "$candidate/bin/java" ] ; then
+            JAVA_HOME=$candidate
+            JAVACMD=$JAVA_HOME/bin/java
+            break
+        fi
+    done
+
+    if [ -z "$JAVACMD" ] ; then
+        JAVACMD=java
+        if ! command -v java >/dev/null 2>&1
+        then
+            die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
 
 Please set the JAVA_HOME variable in your environment to match the
 location of your Java installation."
+        fi
     fi
 fi
 
