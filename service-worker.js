@@ -1,9 +1,10 @@
-const CACHE_NAME = 'dapoermuda-pos-v4';
+const CACHE_NAME = 'dapoermuda-pos-v5';
 const APP_SHELL = [
   './',
   './app-config.js',
   './index.html',
   './manifest.webmanifest',
+  './icons/brand-mark.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png'
