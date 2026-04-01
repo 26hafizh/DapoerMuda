@@ -1493,53 +1493,6 @@
             .filter(Boolean);
     }
 
-    function buildWeeklyRecap(list) {
-        const groups = new Map();
-
-        list.forEach((trx) => {
-            const startDate = getWeekStart(trx.parsedDate);
-            const endDate = getWeekEnd(startDate);
-            const key = startDate.toISOString().slice(0, 10);
-            const group = groups.get(key) || {
-                startDate,
-                endDate,
-                totalRevenue: 0,
-                transactionCount: 0,
-                totalItems: 0
-            };
-
-            group.totalRevenue += trx.total;
-            group.transactionCount += 1;
-            group.totalItems += getTransactionItemCount(trx);
-            groups.set(key, group);
-        });
-
-        return Array.from(groups.values()).sort((a, b) => b.startDate - a.startDate);
-    }
-
-    function buildMonthlyRecap(list) {
-        const groups = new Map();
-
-        list.forEach((trx) => {
-            const date = trx.parsedDate;
-            const startDate = getMonthStart(date);
-            const key = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-            const group = groups.get(key) || {
-                startDate,
-                totalRevenue: 0,
-                transactionCount: 0,
-                totalItems: 0
-            };
-
-            group.totalRevenue += trx.total;
-            group.transactionCount += 1;
-            group.totalItems += getTransactionItemCount(trx);
-            groups.set(key, group);
-        });
-
-        return Array.from(groups.values()).sort((a, b) => b.startDate - a.startDate);
-    }
-
     function normalizeTransactions(items) {
         if (!Array.isArray(items)) return [];
 
@@ -1678,10 +1631,6 @@
             updatedBy: String(source.updatedBy ?? ''),
             deviceId: String(source.deviceId ?? '')
         };
-    }
-
-    function cloneData(value) {
-        return JSON.parse(JSON.stringify(value));
     }
 
     function getOrCreateDeviceId() {
@@ -3766,10 +3715,6 @@
         updateRestockProductInfo();
         showNotice(`Stok ${product.name} berhasil ditambahkan!`, 'success', 'Restok Berhasil');
         void requestCloudSync();
-    }
-
-    function addOrRestock() {
-        addProduct();
     }
 
     // --- Riwayat ---
