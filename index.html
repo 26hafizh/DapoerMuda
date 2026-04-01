@@ -46,6 +46,7 @@
             --paper-strong: #fbf4ec;
             --paper-border: rgba(74, 53, 43, 0.18);
             --accent-gold: #d6b17a;
+            --app-height: 100dvh;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-right: env(safe-area-inset-right, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -54,7 +55,7 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
 
-        html, body { height: 100%; }
+        html, body { height: 100%; overflow: hidden; }
         body {
             background:
                 radial-gradient(circle at 12% 18%, rgba(210, 85, 63, 0.2), transparent 24%),
@@ -62,12 +63,14 @@
                 linear-gradient(145deg, #14100f 0%, #1c1513 48%, #281d17 100%);
             display: flex;
             justify-content: center;
-            height: 100vh;
-            height: 100dvh;
-            min-height: 100vh;
-            min-height: 100dvh;
+            align-items: center;
+            width: 100%;
+            height: var(--app-height);
+            min-height: var(--app-height);
+            padding: 12px 0;
             overflow-x: hidden;
-            overflow-y: auto;
+            overflow-y: hidden;
+            overscroll-behavior: none;
             position: relative;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -97,9 +100,9 @@
         #app-container {
             width: 100%;
             max-width: 480px;
-            height: calc(100vh - 24px);
-            height: calc(100dvh - 24px);
-            margin: 12px 0;
+            height: calc(var(--app-height) - 24px);
+            max-height: calc(var(--app-height) - 24px);
+            margin: 0;
             background:
                 linear-gradient(180deg, rgba(29, 22, 19, 0.98), rgba(18, 14, 12, 0.98)),
                 linear-gradient(145deg, rgba(255,255,255,0.06), transparent 38%);
@@ -140,6 +143,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            overflow: hidden;
             position: relative;
             z-index: 1;
         }
@@ -380,7 +384,7 @@
         }
 
         /* Login Screen */
-        #login-screen { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; min-height: 0; padding: 18px; background: linear-gradient(180deg, #1d1614, #281d18 58%, #1a1412 100%); position: relative; z-index: 1; overflow-x: hidden; overflow-y: auto; border-radius: 28px; }
+        #login-screen { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; min-height: 0; padding: 18px; background: linear-gradient(180deg, #1d1614, #281d18 58%, #1a1412 100%); position: relative; z-index: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border-radius: 28px; }
         #login-screen::before,
         #login-screen::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
         #login-screen::before { width: 220px; height: 220px; background: radial-gradient(circle, rgba(210, 85, 63, 0.16), transparent 72%); top: -80px; right: -60px; }
@@ -626,10 +630,15 @@
         .form-control:focus { border-color: rgba(210, 85, 63, 0.34); background: rgba(255,255,255,0.92); box-shadow: 0 0 0 6px rgba(210, 85, 63, 0.08); }
 
         @media (max-width: 520px) {
+            body {
+                align-items: stretch;
+                padding: 0;
+            }
+
             #app-container {
                 max-width: none;
-                height: 100vh;
-                height: 100dvh;
+                height: var(--app-height);
+                max-height: var(--app-height);
                 margin: 0;
                 border-radius: 0;
                 padding-top: max(14px, calc(10px + var(--safe-top)));
@@ -1712,8 +1721,37 @@
     let launchAnimationPlayed = false;
     let authTransitionBusy = false;
     let activeViewId = 'kasir';
+    let viewportSyncRaf = 0;
+
+    function syncAppViewportHeight() {
+        const viewport = window.visualViewport;
+        const nextHeight = Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+        if (nextHeight > 0) {
+            document.documentElement.style.setProperty('--app-height', `${nextHeight}px`);
+        }
+    }
+
+    function scheduleViewportSync() {
+        if (viewportSyncRaf) {
+            cancelAnimationFrame(viewportSyncRaf);
+        }
+
+        viewportSyncRaf = requestAnimationFrame(() => {
+            viewportSyncRaf = 0;
+            syncAppViewportHeight();
+        });
+    }
+
+    syncAppViewportHeight();
+    window.addEventListener('resize', scheduleViewportSync, { passive: true });
+    window.addEventListener('orientationchange', scheduleViewportSync, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scheduleViewportSync, { passive: true });
+        window.visualViewport.addEventListener('scroll', scheduleViewportSync, { passive: true });
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
+        scheduleViewportSync();
         const userInput = document.getElementById('login-user');
         const passInput = document.getElementById('login-pass');
         const cashInput = document.getElementById('cash-received');
