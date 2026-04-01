@@ -1,0 +1,22 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.jdt.ls.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+    "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+    "java.errors.incompleteClasspath.severity": "ignore",
+    "java.import.exclusions": [
+        "**/build/**",
+        "**/.gradle/**",
+        "**/.gradle-user/**",
+        "**/.gradle-user-release/**",
+        "**/.android-user/**",
+        "**/.android-user-release/**"
+    ],
+    "files.watcherExclude": {
+        "**/.gradle/**": true,
+        "**/build/**": true,
+        "**/.gradle-user/**": true,
+        "**/.gradle-user-release/**": true,
+        "**/.android-user/**": true,
+        "**/.android-user-release/**": true
+    }
+}
