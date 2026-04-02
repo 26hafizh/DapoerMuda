@@ -1242,13 +1242,29 @@
     let installPromptEvent = null;
     const runtimeConfig = window.DAPOERMUDA_APP_CONFIG || {};
     const backendOverrideStorageKey = 'warung_backend_api_override';
+    const backendForceLocalStorageKey = 'warung_backend_force_local';
+
+    function isNativeAppShell() {
+        const hostName = String(location.hostname || '').toLowerCase();
+        const isLocalHost = hostName === 'localhost' || hostName === '127.0.0.1';
+        const protocol = String(location.protocol || '').toLowerCase();
+        const port = String(location.port || '');
+        const hasCapacitorBridge = typeof window.Capacitor?.isNativePlatform === 'function'
+            ? window.Capacitor.isNativePlatform()
+            : Boolean(window.Capacitor);
+
+        return protocol === 'capacitor:'
+            || protocol === 'file:'
+            || hasCapacitorBridge
+            || (isLocalHost && /^https?:$/i.test(protocol) && port !== '8787');
+    }
 
     function isEmbeddedLocalOrigin() {
         const hostName = String(location.hostname || '').toLowerCase();
         const isLocalHost = hostName === 'localhost' || hostName === '127.0.0.1';
         const protocol = String(location.protocol || '').toLowerCase();
         const port = String(location.port || '');
-        return isLocalHost && /^https?:$/i.test(protocol) && port !== '8787';
+        return isLocalHost && /^https?:$/i.test(protocol) && port !== '8787' && isNativeAppShell();
     }
 
     function usesSameOriginBackend(value) {
@@ -1296,7 +1312,7 @@
             return configuredUrl;
         }
 
-        if (useSameOriginBackend && /^https?:$/i.test(location.protocol) && !isEmbeddedLocalOrigin()) {
+        if (useSameOriginBackend && /^https?:$/i.test(location.protocol) && !isNativeAppShell()) {
             return `${location.origin.replace(/\/+$/, '')}/api`;
         }
 
@@ -1324,21 +1340,49 @@
         }
     }
 
+    function readStoredForceLocalMode() {
+        try {
+            return localStorage.getItem(backendForceLocalStorageKey) === '1';
+        } catch (error) {
+            console.warn('Status mode lokal backend tidak bisa dibaca.', error);
+            return false;
+        }
+    }
+
+    function persistForceLocalMode(forceLocalMode) {
+        try {
+            if (forceLocalMode) {
+                localStorage.setItem(backendForceLocalStorageKey, '1');
+            } else {
+                localStorage.removeItem(backendForceLocalStorageKey);
+            }
+        } catch (error) {
+            console.warn('Status mode lokal backend gagal disimpan.', error);
+        }
+    }
+
     function stripApiSuffix(apiBaseUrl) {
         return String(apiBaseUrl ?? '').replace(/\/api$/i, '');
     }
 
     const defaultConfiguredApiBaseUrl = resolveConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl);
     const storedBackendOverride = readStoredBackendOverride();
-    const resolvedApiBaseUrl = storedBackendOverride || defaultConfiguredApiBaseUrl;
+    const storedForceLocalMode = readStoredForceLocalMode();
+    const resolvedApiBaseUrl = storedBackendOverride || (storedForceLocalMode ? '' : defaultConfiguredApiBaseUrl);
     const backendState = {
         enabled: Boolean(resolvedApiBaseUrl),
         apiBaseUrl: resolvedApiBaseUrl,
         defaultApiBaseUrl: defaultConfiguredApiBaseUrl,
         overrideApiBaseUrl: storedBackendOverride,
+        forceLocalMode: storedForceLocalMode,
+        rejectedApiBaseUrl: '',
         token: '',
         requestTimeoutMs: Math.max(4000, Number(runtimeConfig.requestTimeoutMs) || 12000)
     };
+
+    function setRejectedBackendHint(apiBaseUrl = '') {
+        backendState.rejectedApiBaseUrl = normalizeConfiguredApiBaseUrl(apiBaseUrl);
+    }
 
     const storageKeys = {
         products: 'warung_products',
@@ -2000,6 +2044,25 @@
     function registerServiceWorker() {
         if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
 
+        if (isNativeAppShell()) {
+            Promise.resolve().then(async () => {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+                    if ('caches' in window) {
+                        const cacheKeys = await caches.keys();
+                        await Promise.all(cacheKeys
+                            .filter((key) => String(key).startsWith('dapoermuda-pos-'))
+                            .map((key) => caches.delete(key)));
+                    }
+                } catch (error) {
+                    console.warn('Service worker native tidak berhasil dibersihkan.', error);
+                }
+            });
+            return;
+        }
+
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./service-worker.js').catch((error) => {
                 console.warn('Service worker gagal didaftarkan.', error);
@@ -2210,15 +2273,26 @@
         return Boolean(backendState.enabled && backendState.apiBaseUrl);
     }
 
-    function updateBackendState(overrideApiBaseUrl = '') {
-        const normalizedOverride = normalizeConfiguredApiBaseUrl(overrideApiBaseUrl);
+    function updateBackendState(options = {}) {
+        const normalizedOverride = normalizeConfiguredApiBaseUrl(options.overrideApiBaseUrl ?? backendState.overrideApiBaseUrl);
+        const forceLocalMode = Boolean(options.forceLocalMode ?? backendState.forceLocalMode);
         backendState.overrideApiBaseUrl = normalizedOverride;
-        backendState.apiBaseUrl = normalizedOverride || backendState.defaultApiBaseUrl;
+        backendState.forceLocalMode = forceLocalMode;
+        backendState.apiBaseUrl = normalizedOverride || (forceLocalMode ? '' : backendState.defaultApiBaseUrl);
         backendState.enabled = Boolean(backendState.apiBaseUrl);
         backendState.token = '';
     }
 
     function getBackendPanelCopy() {
+        if (backendState.forceLocalMode) {
+            return {
+                loginCopy: 'Mode lokal/demo aktif. Login cepat: admin / 123 atau user / 123.',
+                badgeText: 'Mode lokal',
+                badgeClassName: 'backend-mode-badge is-local',
+                statusNote: 'Mode lokal sedang dipakai khusus di perangkat ini. Tempel URL backend yang benar jika ingin login ke server pusat lagi.'
+            };
+        }
+
         if (isBackendEnabled()) {
             const sourceLabel = backendState.overrideApiBaseUrl
                 ? 'URL backend tersimpan di perangkat ini.'
@@ -2261,8 +2335,97 @@
         }
 
         if (input && document.activeElement !== input) {
-            input.value = stripApiSuffix(backendState.overrideApiBaseUrl || backendState.apiBaseUrl);
+            input.value = stripApiSuffix(backendState.overrideApiBaseUrl || (backendState.forceLocalMode ? backendState.rejectedApiBaseUrl : backendState.apiBaseUrl));
         }
+    }
+
+    function restoreConfiguredBackend(showFeedback = true) {
+        setRejectedBackendHint('');
+        persistBackendOverride('');
+        persistForceLocalMode(false);
+        updateBackendState({
+            overrideApiBaseUrl: '',
+            forceLocalMode: false
+        });
+        refreshBackendSetupPanel();
+
+        if (!showFeedback) {
+            return;
+        }
+
+        if (isBackendEnabled()) {
+            showNotice(`Konfigurasi backend bawaan aplikasi aktif kembali: ${backendState.apiBaseUrl}`, 'info', 'Backend Bawaan Aktif');
+            return;
+        }
+
+        showNotice('Aplikasi tetap di mode lokal karena URL backend bawaan belum dikonfigurasi.', 'info', 'Mode Lokal Aktif');
+    }
+
+    function forceLocalBackendMode(showFeedback = true, customMessage = '', rejectedApiBaseUrl = '') {
+        setRejectedBackendHint(rejectedApiBaseUrl);
+        persistBackendOverride('');
+        persistForceLocalMode(true);
+        updateBackendState({
+            overrideApiBaseUrl: '',
+            forceLocalMode: true
+        });
+        refreshBackendSetupPanel();
+
+        if (!showFeedback) {
+            return;
+        }
+
+        showNotice(customMessage || 'Aplikasi sekarang memakai mode lokal/demo pada perangkat ini.', 'info', 'Mode Lokal Aktif');
+    }
+
+    function disableBrokenDefaultBackend(rejectedApiBaseUrl = backendState.defaultApiBaseUrl) {
+        if (backendState.overrideApiBaseUrl || !backendState.defaultApiBaseUrl) {
+            return false;
+        }
+
+        forceLocalBackendMode(false, '', rejectedApiBaseUrl);
+        return true;
+    }
+
+    function disableBrokenBackendOverride(rejectedApiBaseUrl = backendState.overrideApiBaseUrl) {
+        if (!backendState.overrideApiBaseUrl) {
+            return false;
+        }
+
+        if (backendState.defaultApiBaseUrl) {
+            restoreConfiguredBackend(false);
+            setRejectedBackendHint(rejectedApiBaseUrl);
+            refreshBackendSetupPanel();
+            return true;
+        }
+
+        forceLocalBackendMode(false, '', rejectedApiBaseUrl);
+        return true;
+    }
+
+    function recoverFromBrokenBackendConfig(rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl) {
+        if (disableBrokenBackendOverride(rejectedApiBaseUrl)) {
+            return true;
+        }
+
+        if (disableBrokenDefaultBackend(rejectedApiBaseUrl)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function degradeUnavailableBackend(rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl) {
+        if (recoverFromBrokenBackendConfig(rejectedApiBaseUrl)) {
+            return true;
+        }
+
+        forceLocalBackendMode(false, '', rejectedApiBaseUrl);
+        return true;
+    }
+
+    function isRecoverableBackendFailure(error) {
+        return Boolean(error?.backendRecoverable || error?.backendLooksMisconfigured);
     }
 
     async function verifyBackendHealth(apiBaseUrl) {
@@ -2282,11 +2445,17 @@
             const htmlMessage = buildBackendResponseError(response.status, payloadText, contentType);
 
             if (!response.ok) {
-                throw new Error(htmlMessage || `Backend merespons ${response.status} saat dites.`);
+                const error = new Error(htmlMessage || `Backend merespons ${response.status} saat dites.`);
+                error.backendLooksMisconfigured = Boolean(htmlMessage);
+                error.backendRecoverable = Boolean(htmlMessage) || response.status >= 500;
+                throw error;
             }
 
             if (htmlMessage) {
-                throw new Error(htmlMessage);
+                const error = new Error(htmlMessage);
+                error.backendLooksMisconfigured = true;
+                error.backendRecoverable = true;
+                throw error;
             }
 
             if (payloadText) {
@@ -2298,16 +2467,22 @@
                 }
 
                 if (payload?.ok !== true) {
-                    throw new Error('Backend belum mengembalikan status sehat. Cek deployment server.');
+                    const error = new Error('Backend belum mengembalikan status sehat. Cek deployment server.');
+                    error.backendRecoverable = true;
+                    throw error;
                 }
             }
         } catch (error) {
             if (error.name === 'AbortError') {
-                throw new Error('Tes backend terlalu lama. Periksa internet atau server backend.');
+                const timeoutError = new Error('Tes backend terlalu lama. Periksa internet atau server backend.');
+                timeoutError.backendRecoverable = true;
+                throw timeoutError;
             }
 
             if (error instanceof TypeError) {
-                throw new Error('Backend tidak bisa dihubungi dari perangkat ini. Cek URL backend, internet, dan pastikan server memakai HTTPS.');
+                const networkError = new Error('Backend tidak bisa dihubungi dari perangkat ini. Cek URL backend, internet, dan pastikan server memakai HTTPS.');
+                networkError.backendRecoverable = true;
+                throw networkError;
             }
 
             throw error;
@@ -2321,38 +2496,32 @@
         const rawValue = input?.value.trim() || '';
 
         if (!rawValue) {
-            clearBackendOverride();
+            restoreConfiguredBackend();
             return;
         }
 
         const normalizedApiBaseUrl = normalizeConfiguredApiBaseUrl(rawValue);
-        persistBackendOverride(normalizedApiBaseUrl);
-        updateBackendState(normalizedApiBaseUrl);
-        refreshBackendSetupPanel();
 
         try {
-            await verifyBackendHealth(backendState.apiBaseUrl);
+            await verifyBackendHealth(normalizedApiBaseUrl);
+            setRejectedBackendHint('');
+            persistBackendOverride(normalizedApiBaseUrl);
+            persistForceLocalMode(false);
+            updateBackendState({
+                overrideApiBaseUrl: normalizedApiBaseUrl,
+                forceLocalMode: false
+            });
+            refreshBackendSetupPanel();
             showNotice('Backend berhasil dihubungkan. Sekarang login bisa memakai akun yang dibuat admin.', 'success', 'Backend Aktif');
         } catch (error) {
+            setRejectedBackendHint(normalizedApiBaseUrl);
+            refreshBackendSetupPanel();
             showNotice(error.message || 'URL backend belum bisa dijangkau dari perangkat ini.', 'warning', 'Cek Backend');
         }
     }
 
     function clearBackendOverride(showFeedback = true) {
-        persistBackendOverride('');
-        updateBackendState('');
-        refreshBackendSetupPanel();
-
-        if (!showFeedback) {
-            return;
-        }
-
-        if (isBackendEnabled()) {
-            showNotice(`Override backend dihapus. APK kembali memakai URL bawaan aplikasi: ${backendState.apiBaseUrl}`, 'info', 'URL Bawaan Aktif');
-            return;
-        }
-
-        showNotice('Override backend dihapus. APK sekarang kembali ke mode lokal/demo pada perangkat ini.', 'info', 'Mode Lokal Aktif');
+        forceLocalBackendMode(showFeedback);
     }
 
     function buildBackendResponseError(status, payloadText, contentType) {
@@ -2360,7 +2529,7 @@
         const looksLikeHtml = /text\/html/i.test(contentType || '') || /^<!doctype html/i.test(trimmedPayload) || /^<html/i.test(trimmedPayload);
 
         if (looksLikeHtml && [404, 405].includes(Number(status))) {
-            return 'URL backend salah. APK sedang mengarah ke halaman web, bukan server API. Tempel URL backend yang benar di panel login lalu simpan.';
+            return 'URL backend salah. Aplikasi sedang mengarah ke halaman web, bukan server API. Tempel URL backend API yang benar di panel login lalu simpan.';
         }
 
         if (looksLikeHtml) {
@@ -2368,6 +2537,21 @@
         }
 
         return '';
+    }
+
+    function getLocalDemoUser(login, password) {
+        const normalizedLogin = String(login ?? '').trim().toLowerCase();
+        const rawPassword = String(password ?? '');
+
+        if (normalizedLogin === 'admin' && rawPassword === '123') {
+            return { login: 'admin', username: 'Admin Utama', role: 'admin' };
+        }
+
+        if (normalizedLogin === 'user' && rawPassword === '123') {
+            return { login: 'user', username: 'Kasir Shift 1', role: 'user' };
+        }
+
+        return null;
     }
 
     async function requestBackend(path, options = {}) {
@@ -2420,26 +2604,36 @@
                 const friendlyMessage = buildBackendResponseError(response.status, payloadText, contentType);
                 const error = new Error(friendlyMessage || payload.message || `Backend merespons ${response.status}.`);
                 error.status = response.status;
+                error.backendLooksMisconfigured = Boolean(friendlyMessage);
+                error.backendRecoverable = Boolean(friendlyMessage) || response.status >= 500;
                 throw error;
             }
 
             const htmlSuccessMessage = buildBackendResponseError(response.status, payloadText, contentType);
             if (htmlSuccessMessage) {
-                throw new Error(htmlSuccessMessage);
+                const error = new Error(htmlSuccessMessage);
+                error.backendLooksMisconfigured = true;
+                throw error;
             }
 
             return payload;
         } catch (error) {
             if (error.name === 'AbortError') {
-                throw new Error('Backend tidak merespons tepat waktu.');
+                const timeoutError = new Error('Backend tidak merespons tepat waktu.');
+                timeoutError.backendRecoverable = true;
+                throw timeoutError;
             }
 
             if (error instanceof TypeError) {
                 if (navigator.onLine === false) {
-                    throw new Error('Perangkat sedang offline. Hubungkan internet lalu coba login lagi.');
+                    const offlineError = new Error('Perangkat sedang offline. Hubungkan internet lalu coba login lagi.');
+                    offlineError.backendRecoverable = true;
+                    throw offlineError;
                 }
 
-                throw new Error('Backend tidak bisa dihubungi dari perangkat ini. Cek URL backend di panel login, koneksi internet, dan pastikan server memakai HTTPS.');
+                const networkError = new Error('Backend tidak bisa dihubungi dari perangkat ini. Cek URL backend di panel login, koneksi internet, dan pastikan server memakai HTTPS.');
+                networkError.backendRecoverable = true;
+                throw networkError;
             }
 
             throw error;
@@ -3166,6 +3360,21 @@
         updateSyncPanel();
         refreshBackendSetupPanel();
 
+        if (isBackendEnabled()) {
+            try {
+                await verifyBackendHealth(backendState.apiBaseUrl);
+                setRejectedBackendHint('');
+            } catch (error) {
+                if (isRecoverableBackendFailure(error)) {
+                    const rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl;
+                    degradeUnavailableBackend(rejectedApiBaseUrl);
+                    refreshBackendSetupPanel();
+                } else {
+                    console.warn('Pemeriksaan backend awal gagal.', error);
+                }
+            }
+        }
+
         if (!isBackendEnabled() && isSyncConfigured()) {
             await syncWithCloud();
         }
@@ -3263,23 +3472,49 @@
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value;
         let loginResult = null;
+        let postLoginNotice = null;
 
         if (isBackendEnabled()) {
             try {
                 loginResult = await loginWithBackend(user, pass);
             } catch (error) {
-                showNotice(error.message || "Username atau password salah!", 'error', 'Login Gagal');
-                return;
+                const rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl;
+                const hadBackendOverride = Boolean(backendState.overrideApiBaseUrl);
+                const switchedToLocalMode = isRecoverableBackendFailure(error) && degradeUnavailableBackend(rejectedApiBaseUrl);
+
+                if (switchedToLocalMode) {
+                    const localDemoUser = getLocalDemoUser(user, pass);
+                    const recoveryMessage = hadBackendOverride
+                        ? 'Backend yang tersimpan di perangkat ini belum bisa dipakai, jadi aplikasi dipindahkan ke mode aman. Periksa URL backend atau server lalu coba lagi.'
+                        : 'Backend aplikasi belum bisa dipakai, jadi aplikasi dipindahkan ke mode lokal di perangkat ini. Isi URL backend yang benar jika ingin kembali ke server pusat.';
+
+                    if (!localDemoUser) {
+                        showNotice(recoveryMessage, 'warning', 'Backend Perlu Diatur');
+                        return;
+                    }
+
+                    currentUser = localDemoUser;
+                    postLoginNotice = {
+                        message: hadBackendOverride
+                            ? 'Backend yang tersimpan tadi otomatis dilepas agar aplikasi tidak terkunci. Jika ingin kembali ke server pusat, isi URL backend API yang benar di panel login.'
+                            : 'Backend aplikasi belum siap dipakai, jadi mode lokal diaktifkan pada perangkat ini. Jika ingin kembali ke server pusat, isi URL backend yang benar di panel login.',
+                        theme: 'warning',
+                        title: 'Backend Perlu Diatur'
+                    };
+                } else {
+                    showNotice(error.message || "Username atau password salah!", 'error', 'Login Gagal');
+                    return;
+                }
             }
         } else {
-            if (user === 'admin' && pass === '123') {
-                currentUser = { login: 'admin', username: 'Admin Utama', role: 'admin' };
-            } else if (user === 'user' && pass === '123') {
-                currentUser = { login: 'user', username: 'Kasir Shift 1', role: 'user' };
-            } else {
+            const localDemoUser = getLocalDemoUser(user, pass);
+
+            if (!localDemoUser) {
                 showNotice("Username atau password salah!", 'error', 'Login Gagal');
                 return;
             }
+
+            currentUser = localDemoUser;
         }
 
         securityReloginPendingNotice = false;
@@ -3298,6 +3533,8 @@
             showNotice('Data lokal lama berhasil dipindahkan ke backend dan sekarang menjadi sumber data utama.', 'success', 'Backend Siap');
         } else if (loginResult?.seedWarning) {
             showNotice(loginResult.seedWarning, 'warning', 'Perlu Cek Data');
+        } else if (postLoginNotice) {
+            showNotice(postLoginNotice.message, postLoginNotice.theme, postLoginNotice.title);
         }
 
         if (!isBackendEnabled()) {
