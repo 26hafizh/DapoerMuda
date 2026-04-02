@@ -1369,6 +1369,7 @@
     const storedBackendOverride = readStoredBackendOverride();
     const storedForceLocalMode = readStoredForceLocalMode();
     const ownerSupportNote = 'Hubungi WA 085126019233 atau IG @hfziltzm.';
+    const ownerLoginHelpCopy = 'Butuh bantuan login? Hubungi WA 085126019233 atau IG @hfziltzm.';
     const resolvedApiBaseUrl = storedBackendOverride || (storedForceLocalMode ? '' : defaultConfiguredApiBaseUrl);
     const backendState = {
         enabled: Boolean(resolvedApiBaseUrl),
@@ -2287,10 +2288,10 @@
     function getBackendPanelCopy() {
         if (backendState.forceLocalMode) {
             return {
-                loginCopy: 'Mode lokal/demo aktif. Login cepat: admin / 123 atau user / 123.',
+                loginCopy: ownerLoginHelpCopy,
                 badgeText: 'Mode lokal',
                 badgeClassName: 'backend-mode-badge is-local',
-                statusNote: `Mode lokal sedang dipakai khusus di perangkat ini. Tempel URL backend yang benar jika ingin login ke server pusat lagi.\n${ownerSupportNote}`
+                statusNote: ownerSupportNote
             };
         }
 
@@ -2300,18 +2301,18 @@
                 : 'URL backend bawaan aplikasi aktif.';
 
             return {
-                loginCopy: 'Mode backend aktif. Gunakan akun yang dibuat admin dari server pusat.',
+                loginCopy: ownerLoginHelpCopy,
                 badgeText: 'Backend aktif',
                 badgeClassName: 'backend-mode-badge',
-                statusNote: `${sourceLabel} ${backendState.apiBaseUrl}\n${ownerSupportNote}`
+                statusNote: ownerSupportNote
             };
         }
 
         return {
-            loginCopy: 'Mode lokal/demo aktif. Login cepat: admin / 123 atau user / 123.',
+            loginCopy: ownerLoginHelpCopy,
             badgeText: 'Mode lokal',
             badgeClassName: 'backend-mode-badge is-local',
-            statusNote: `APK ini belum memakai backend publik. Jika ingin login akun server atau dipakai banyak HP, isi URL backend Railway/domain publik lalu simpan.\n${ownerSupportNote}`
+            statusNote: ownerSupportNote
         };
     }
 
