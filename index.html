@@ -425,7 +425,7 @@
         .backend-config-card { text-align: left; margin-top: 14px; padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); }
         .backend-mode-badge { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; background: rgba(133, 154, 42, 0.2); color: #f4f7dd; }
         .backend-mode-badge.is-local { background: rgba(210, 85, 63, 0.22); color: #ffdccf; }
-        .backend-status-note { display: block; margin-top: 10px; color: rgba(251, 244, 236, 0.78); line-height: 1.65; word-break: break-word; }
+        .backend-status-note { display: block; margin-top: 10px; color: rgba(251, 244, 236, 0.78); line-height: 1.65; word-break: break-word; white-space: pre-line; }
         .backend-url-label { display: block; margin-top: 12px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: rgba(251, 244, 236, 0.92); }
         .backend-url-input { width: 100%; min-height: 46px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.18); color: var(--paper-strong); padding: 0 14px; font-size: 13px; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .backend-url-input::placeholder { color: rgba(251, 244, 236, 0.4); }
@@ -1368,6 +1368,7 @@
     const defaultConfiguredApiBaseUrl = resolveConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl);
     const storedBackendOverride = readStoredBackendOverride();
     const storedForceLocalMode = readStoredForceLocalMode();
+    const ownerSupportNote = 'Hubungi WA 085126019233 atau IG @hfziltzm.';
     const resolvedApiBaseUrl = storedBackendOverride || (storedForceLocalMode ? '' : defaultConfiguredApiBaseUrl);
     const backendState = {
         enabled: Boolean(resolvedApiBaseUrl),
@@ -2289,7 +2290,7 @@
                 loginCopy: 'Mode lokal/demo aktif. Login cepat: admin / 123 atau user / 123.',
                 badgeText: 'Mode lokal',
                 badgeClassName: 'backend-mode-badge is-local',
-                statusNote: 'Mode lokal sedang dipakai khusus di perangkat ini. Tempel URL backend yang benar jika ingin login ke server pusat lagi.'
+                statusNote: `Mode lokal sedang dipakai khusus di perangkat ini. Tempel URL backend yang benar jika ingin login ke server pusat lagi.\n${ownerSupportNote}`
             };
         }
 
@@ -2302,7 +2303,7 @@
                 loginCopy: 'Mode backend aktif. Gunakan akun yang dibuat admin dari server pusat.',
                 badgeText: 'Backend aktif',
                 badgeClassName: 'backend-mode-badge',
-                statusNote: `${sourceLabel} ${backendState.apiBaseUrl}`
+                statusNote: `${sourceLabel} ${backendState.apiBaseUrl}\n${ownerSupportNote}`
             };
         }
 
@@ -2310,7 +2311,7 @@
             loginCopy: 'Mode lokal/demo aktif. Login cepat: admin / 123 atau user / 123.',
             badgeText: 'Mode lokal',
             badgeClassName: 'backend-mode-badge is-local',
-            statusNote: 'APK ini belum memakai backend publik. Jika ingin login akun server atau dipakai banyak HP, isi URL backend Railway/domain publik lalu simpan.'
+            statusNote: `APK ini belum memakai backend publik. Jika ingin login akun server atau dipakai banyak HP, isi URL backend Railway/domain publik lalu simpan.\n${ownerSupportNote}`
         };
     }
 
