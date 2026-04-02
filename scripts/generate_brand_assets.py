@@ -11,6 +11,7 @@ ICONS_DIR = ROOT / "icons"
 BRANDING_DIR = ROOT / "branding"
 ANDROID_RES_DIR = ROOT / "android" / "app" / "src" / "main" / "res"
 SOURCE_LOGO_PATH = BRANDING_DIR / "dp.jpg"
+LAUNCHER_LOGO_PATH = BRANDING_DIR / "launcher-logo.png"
 
 PALETTE = {
     "paper_top": (247, 237, 223, 255),
@@ -23,6 +24,11 @@ PALETTE = {
     "green_dark": (90, 116, 30, 255),
     "white": (255, 255, 255, 255),
 }
+
+WEB_ICON_MARK_PADDING_RATIO = 0.16
+LAUNCHER_LOGO_PADDING_RATIO = 0.13
+ADAPTIVE_FOREGROUND_PADDING_RATIO = 0.18
+MONOCHROME_FOREGROUND_PADDING_RATIO = 0.18
 
 LAUNCHER_SIZES = {
     "mipmap-mdpi": 48,
@@ -163,6 +169,24 @@ def load_brand_mark(source_logo: Image.Image) -> Image.Image:
     return image
 
 
+def load_launcher_logo(mark: Image.Image) -> Image.Image:
+    if LAUNCHER_LOGO_PATH.exists():
+        with Image.open(LAUNCHER_LOGO_PATH) as raw_image:
+            launcher_logo = ImageOps.exif_transpose(raw_image).convert("RGBA")
+        launcher_logo = strip_edge_background(launcher_logo)
+        bbox = launcher_logo.getbbox()
+        if bbox is not None:
+            launcher_logo = launcher_logo.crop(bbox)
+
+        # Android launcher icons should use a compact symbol only.
+        # If the provided asset is a wide lockup with wordmark text,
+        # fall back to the cleaned brand mark so the installed icon stays legible.
+        if launcher_logo.width <= round(launcher_logo.height * 1.08):
+            return launcher_logo
+
+    return mark.copy()
+
+
 def fit_mark(mark: Image.Image, size: int, padding_ratio: float, include_shadow: bool = True) -> Image.Image:
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     usable = max(1, round(size * (1 - (padding_ratio * 2))))
@@ -197,18 +221,18 @@ def apply_rounded_mask(image: Image.Image, radius_ratio: float) -> Image.Image:
     return image
 
 
-def build_launcher_icon(size: int, mark: Image.Image) -> Image.Image:
+def build_launcher_icon(size: int, mark: Image.Image, padding_ratio: float) -> Image.Image:
     icon = Image.new("RGBA", (size, size), (0, 0, 0, 255))
-    icon.alpha_composite(fit_mark(mark, size, padding_ratio=0.07, include_shadow=False))
+    icon.alpha_composite(fit_mark(mark, size, padding_ratio=padding_ratio, include_shadow=False))
     return icon
 
 
 def build_adaptive_foreground(size: int, mark: Image.Image) -> Image.Image:
-    return fit_mark(mark, size, padding_ratio=0.07, include_shadow=False)
+    return fit_mark(mark, size, padding_ratio=ADAPTIVE_FOREGROUND_PADDING_RATIO, include_shadow=False)
 
 
 def build_monochrome_foreground(size: int, mark: Image.Image) -> Image.Image:
-    foreground = fit_mark(mark, size, padding_ratio=0.08, include_shadow=False)
+    foreground = fit_mark(mark, size, padding_ratio=MONOCHROME_FOREGROUND_PADDING_RATIO, include_shadow=False)
     alpha = foreground.getchannel("A")
     monochrome = Image.new("RGBA", (size, size), PALETTE["white"])
     monochrome.putalpha(alpha)
@@ -275,19 +299,21 @@ def save_png(image: Image.Image, path: Path) -> None:
 def main() -> None:
     source_logo = load_logo_source()
     mark = load_brand_mark(source_logo)
+    launcher_logo = load_launcher_logo(mark)
 
     brand_mark = build_ui_mark(1024, mark)
     save_png(brand_mark, ICONS_DIR / "brand-mark.png")
 
-    icon_1024 = build_launcher_icon(1024, mark)
-    save_png(icon_1024.resize((512, 512), Image.Resampling.LANCZOS), ICONS_DIR / "icon-512.png")
-    save_png(icon_1024.resize((192, 192), Image.Resampling.LANCZOS), ICONS_DIR / "icon-192.png")
-    save_png(icon_1024.resize((512, 512), Image.Resampling.LANCZOS), ICONS_DIR / "icon-maskable-512.png")
+    web_icon_1024 = build_launcher_icon(1024, mark, WEB_ICON_MARK_PADDING_RATIO)
+    save_png(web_icon_1024.resize((512, 512), Image.Resampling.LANCZOS), ICONS_DIR / "icon-512.png")
+    save_png(web_icon_1024.resize((192, 192), Image.Resampling.LANCZOS), ICONS_DIR / "icon-192.png")
+    save_png(web_icon_1024.resize((512, 512), Image.Resampling.LANCZOS), ICONS_DIR / "icon-maskable-512.png")
 
-    adaptive_foreground = build_adaptive_foreground(1024, mark)
+    android_launcher_1024 = build_launcher_icon(1024, launcher_logo, LAUNCHER_LOGO_PADDING_RATIO)
+    adaptive_foreground = build_adaptive_foreground(1024, launcher_logo)
     monochrome_foreground = build_monochrome_foreground(1024, mark)
     for folder, size in LAUNCHER_SIZES.items():
-        icon = icon_1024.resize((size, size), Image.Resampling.LANCZOS)
+        icon = android_launcher_1024.resize((size, size), Image.Resampling.LANCZOS)
         foreground = adaptive_foreground.resize((size, size), Image.Resampling.LANCZOS)
         monochrome = monochrome_foreground.resize((size, size), Image.Resampling.LANCZOS)
         save_png(icon, ANDROID_RES_DIR / folder / "ic_launcher.png")

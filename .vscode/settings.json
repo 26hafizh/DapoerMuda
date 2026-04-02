@@ -13,6 +13,10 @@
     "jdk.project.jdkhome": "C:\\Program Files\\Android\\Android Studio\\jbr",
     "java.errors.incompleteClasspath.severity": "ignore",
     "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.metadata/**",
+        "**/archetype-resources/**",
+        "**/META-INF/maven/**",
         "**/build/**",
         "**/.gradle/**",
         "**/.gradle-user/**",
@@ -20,7 +24,14 @@
         "**/.android-user/**",
         "**/.android-user-release/**"
     ],
+    "java.project.resourceFilters": [
+        "node_modules",
+        "\\.git",
+        "\\.gradle",
+        "build"
+    ],
     "files.watcherExclude": {
+        "**/node_modules/**": true,
         "**/.gradle/**": true,
         "**/build/**": true,
         "**/.gradle-user/**": true,
