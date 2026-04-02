@@ -422,14 +422,14 @@
         .login-demo { background: rgba(26, 19, 16, 0.92); padding: 14px 15px; border-radius: 18px; margin-top: clamp(18px, 3vh, 30px); text-align: center; font-size: 12px; line-height: 1.7; color: rgba(251, 244, 236, 0.72); border: 1px solid rgba(255, 255, 255, 0.06); }
         .login-demo code { color: var(--paper-strong); font-weight: 700; background: rgba(210,85,63,0.18); padding: 2px 6px; border-radius: 8px; }
         .backend-login-copy { display: block; margin-top: 4px; }
+        .backend-login-copy:empty { display: none; }
         .backend-config-card { text-align: left; margin-top: 14px; padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); }
         .backend-mode-badge { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; background: rgba(133, 154, 42, 0.2); color: #f4f7dd; }
         .backend-mode-badge.is-local { background: rgba(210, 85, 63, 0.22); color: #ffdccf; }
         .backend-mode-badge.is-contact { gap: 10px; min-height: 44px; padding: 0 16px; font-size: 12px; letter-spacing: 0.04em; text-transform: none; background: linear-gradient(135deg, rgba(133, 154, 42, 0.28), rgba(106, 128, 31, 0.4)); color: #f6f9e8; }
         .backend-mode-badge.is-contact i { font-size: 16px; color: #dff0b7; }
-        .backend-status-note { display: block; margin-top: 10px; color: rgba(251, 244, 236, 0.78); line-height: 1.65; word-break: break-word; white-space: pre-line; }
-        .backend-contact-line { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: rgba(251, 244, 236, 0.9); }
-        .backend-contact-line i { font-size: 16px; color: #f0b2cf; }
+        .backend-status-note { display: block; margin-top: 12px; }
+        .backend-mode-badge.is-contact.is-instagram i { color: #ffd0e2; }
         .backend-url-label { display: block; margin-top: 12px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: rgba(251, 244, 236, 0.92); }
         .backend-url-input { width: 100%; min-height: 46px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.18); color: var(--paper-strong); padding: 0 14px; font-size: 13px; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .backend-url-input::placeholder { color: rgba(251, 244, 236, 0.4); }
@@ -960,11 +960,11 @@
             </div>
             <button class="btn btn-primary btn-block login-submit" onclick="login()">Masuk <i class="fas fa-arrow-right"></i></button>
             <div class="login-demo">
-                <strong>Info login:</strong><br>
-                <span id="backend-login-copy" class="backend-login-copy">Aplikasi ini selalu memakai backend pusat agar data admin dan kasir otomatis sinkron di semua device.</span>
+                <strong>Tentang saya:</strong><br>
+                <span id="backend-login-copy" class="backend-login-copy"></span>
                 <div class="backend-config-card">
                     <span id="backend-mode-badge" class="backend-mode-badge is-contact"><i class="fab fa-whatsapp" aria-hidden="true"></i><span>085126019233</span></span>
-                    <span id="backend-status-note" class="backend-status-note"><span class="backend-contact-line"><i class="fab fa-instagram" aria-hidden="true"></i><span>@hfziltzm</span></span></span>
+                    <span id="backend-status-note" class="backend-status-note"><span class="backend-mode-badge is-contact is-instagram"><i class="fab fa-instagram" aria-hidden="true"></i><span>@hfziltzm</span></span></span>
                 </div>
                 <button id="install-app-btn" class="btn btn-success btn-block install-app-btn hidden" type="button" onclick="installApp()"><i class="fas fa-download"></i> Instal Aplikasi</button>
                 <span class="install-app-note">Agar bisa dipasang di HP, buka app ini lewat link HTTPS lalu tekan tombol instal.</span>
@@ -1372,7 +1372,6 @@
     const storedForceLocalMode = readStoredForceLocalMode();
     const ownerWhatsAppNumber = '085126019233';
     const ownerInstagramHandle = '@hfziltzm';
-    const backendLockedNotice = 'Aplikasi ini selalu memakai backend pusat agar data admin dan kasir otomatis sinkron di semua device.';
     const resolvedApiBaseUrl = defaultConfiguredApiBaseUrl;
     const backendState = {
         enabled: Boolean(resolvedApiBaseUrl),
@@ -1394,7 +1393,7 @@
     }
 
     function getOwnerInstagramHtml() {
-        return `<span class="backend-contact-line"><i class="fab fa-instagram" aria-hidden="true"></i><span>${escapeHtml(ownerInstagramHandle)}</span></span>`;
+        return `<span class="backend-mode-badge is-contact is-instagram"><i class="fab fa-instagram" aria-hidden="true"></i><span>${escapeHtml(ownerInstagramHandle)}</span></span>`;
     }
 
     persistBackendOverride('');
@@ -2302,7 +2301,7 @@
     function getBackendPanelCopy() {
         if (isBackendEnabled()) {
             return {
-                loginCopy: backendLockedNotice,
+                loginCopy: '',
                 badgeHtml: getOwnerWhatsAppBadgeHtml(),
                 badgeClassName: 'backend-mode-badge is-contact',
                 statusHtml: getOwnerInstagramHtml()
@@ -2310,7 +2309,7 @@
         }
 
         return {
-            loginCopy: 'Aplikasi ini wajib terhubung ke backend pusat sebelum dipakai.',
+            loginCopy: '',
             badgeHtml: getOwnerWhatsAppBadgeHtml(),
             badgeClassName: 'backend-mode-badge is-contact',
             statusHtml: getOwnerInstagramHtml()
@@ -2325,6 +2324,7 @@
 
         if (loginCopy) {
             loginCopy.textContent = copy.loginCopy;
+            loginCopy.style.display = copy.loginCopy ? 'block' : 'none';
         }
 
         if (badge) {
