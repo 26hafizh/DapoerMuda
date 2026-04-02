@@ -957,16 +957,10 @@
             <button class="btn btn-primary btn-block login-submit" onclick="login()">Masuk <i class="fas fa-arrow-right"></i></button>
             <div class="login-demo">
                 <strong>Info login:</strong><br>
-                <span id="backend-login-copy" class="backend-login-copy">Memeriksa mode login aplikasi...</span>
+                <span id="backend-login-copy" class="backend-login-copy">Aplikasi ini selalu memakai backend pusat agar data admin dan kasir otomatis sinkron di semua device.</span>
                 <div class="backend-config-card">
-                    <span id="backend-mode-badge" class="backend-mode-badge">Memeriksa backend</span>
-                    <span id="backend-status-note" class="backend-status-note">Jika APK belum tersambung ke backend publik, Anda bisa tempel URL backend di bawah lalu simpan.</span>
-                    <label for="backend-url-input" class="backend-url-label">URL backend untuk APK</label>
-                    <input type="url" id="backend-url-input" class="backend-url-input" placeholder="https://domain-backend-anda.com">
-                    <div class="backend-config-actions">
-                        <button class="btn btn-primary backend-config-btn" type="button" onclick="saveBackendConfig()"><i class="fas fa-link"></i> Simpan & Tes Backend</button>
-                        <button class="btn btn-success backend-config-btn" type="button" onclick="clearBackendOverride()"><i class="fas fa-mobile-screen-button"></i> Pakai Mode Lokal</button>
-                    </div>
+                    <span id="backend-mode-badge" class="backend-mode-badge">Backend pusat</span>
+                    <span id="backend-status-note" class="backend-status-note">Hubungi WA 085126019233 atau IG @hfziltzm.</span>
                 </div>
                 <button id="install-app-btn" class="btn btn-success btn-block install-app-btn hidden" type="button" onclick="installApp()"><i class="fas fa-download"></i> Instal Aplikasi</button>
                 <span class="install-app-note">Agar bisa dipasang di HP, buka app ini lewat link HTTPS lalu tekan tombol instal.</span>
@@ -1243,6 +1237,7 @@
     const runtimeConfig = window.DAPOERMUDA_APP_CONFIG || {};
     const backendOverrideStorageKey = 'warung_backend_api_override';
     const backendForceLocalStorageKey = 'warung_backend_force_local';
+    const enforcedBackendOrigin = 'https://dapoermuda-production.up.railway.app';
 
     function isNativeAppShell() {
         const hostName = String(location.hostname || '').toLowerCase();
@@ -1365,18 +1360,22 @@
         return String(apiBaseUrl ?? '').replace(/\/api$/i, '');
     }
 
-    const defaultConfiguredApiBaseUrl = resolveConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl);
+    const runtimeConfiguredApiBaseUrl = usesSameOriginBackend(runtimeConfig.apiBaseUrl)
+        ? ''
+        : normalizeConfiguredApiBaseUrl(runtimeConfig.apiBaseUrl);
+    const defaultConfiguredApiBaseUrl = runtimeConfiguredApiBaseUrl || normalizeConfiguredApiBaseUrl(enforcedBackendOrigin);
     const storedBackendOverride = readStoredBackendOverride();
     const storedForceLocalMode = readStoredForceLocalMode();
     const ownerSupportNote = 'Hubungi WA 085126019233 atau IG @hfziltzm.';
     const ownerLoginHelpCopy = 'Butuh bantuan login? Hubungi WA 085126019233 atau IG @hfziltzm.';
-    const resolvedApiBaseUrl = storedBackendOverride || (storedForceLocalMode ? '' : defaultConfiguredApiBaseUrl);
+    const backendLockedNotice = 'Aplikasi ini selalu memakai backend pusat agar data admin dan kasir otomatis sinkron di semua device.';
+    const resolvedApiBaseUrl = defaultConfiguredApiBaseUrl;
     const backendState = {
         enabled: Boolean(resolvedApiBaseUrl),
         apiBaseUrl: resolvedApiBaseUrl,
         defaultApiBaseUrl: defaultConfiguredApiBaseUrl,
-        overrideApiBaseUrl: storedBackendOverride,
-        forceLocalMode: storedForceLocalMode,
+        overrideApiBaseUrl: '',
+        forceLocalMode: false,
         rejectedApiBaseUrl: '',
         token: '',
         requestTimeoutMs: Math.max(4000, Number(runtimeConfig.requestTimeoutMs) || 12000)
@@ -1385,6 +1384,9 @@
     function setRejectedBackendHint(apiBaseUrl = '') {
         backendState.rejectedApiBaseUrl = normalizeConfiguredApiBaseUrl(apiBaseUrl);
     }
+
+    persistBackendOverride('');
+    persistForceLocalMode(false);
 
     const storageKeys = {
         products: 'warung_products',
@@ -2286,32 +2288,19 @@
     }
 
     function getBackendPanelCopy() {
-        if (backendState.forceLocalMode) {
-            return {
-                loginCopy: ownerLoginHelpCopy,
-                badgeText: 'Mode lokal',
-                badgeClassName: 'backend-mode-badge is-local',
-                statusNote: ownerSupportNote
-            };
-        }
-
         if (isBackendEnabled()) {
-            const sourceLabel = backendState.overrideApiBaseUrl
-                ? 'URL backend tersimpan di perangkat ini.'
-                : 'URL backend bawaan aplikasi aktif.';
-
             return {
-                loginCopy: ownerLoginHelpCopy,
-                badgeText: 'Backend aktif',
+                loginCopy: backendLockedNotice,
+                badgeText: 'Backend pusat',
                 badgeClassName: 'backend-mode-badge',
                 statusNote: ownerSupportNote
             };
         }
 
         return {
-            loginCopy: ownerLoginHelpCopy,
-            badgeText: 'Mode lokal',
-            badgeClassName: 'backend-mode-badge is-local',
+            loginCopy: 'Aplikasi ini wajib terhubung ke backend pusat sebelum dipakai.',
+            badgeText: 'Backend wajib aktif',
+            badgeClassName: 'backend-mode-badge',
             statusNote: ownerSupportNote
         };
     }
@@ -2320,7 +2309,6 @@
         const loginCopy = document.getElementById('backend-login-copy');
         const badge = document.getElementById('backend-mode-badge');
         const statusNote = document.getElementById('backend-status-note');
-        const input = document.getElementById('backend-url-input');
         const copy = getBackendPanelCopy();
 
         if (loginCopy) {
@@ -2335,10 +2323,6 @@
         if (statusNote) {
             statusNote.textContent = copy.statusNote;
         }
-
-        if (input && document.activeElement !== input) {
-            input.value = stripApiSuffix(backendState.overrideApiBaseUrl || (backendState.forceLocalMode ? backendState.rejectedApiBaseUrl : backendState.apiBaseUrl));
-        }
     }
 
     function restoreConfiguredBackend(showFeedback = true) {
@@ -2351,33 +2335,24 @@
         });
         refreshBackendSetupPanel();
 
-        if (!showFeedback) {
-            return;
+        if (showFeedback) {
+            showNotice('Aplikasi dikunci ke backend pusat agar semua device memakai data yang sama.', 'info', 'Backend Pusat Aktif');
         }
-
-        if (isBackendEnabled()) {
-            showNotice(`Konfigurasi backend bawaan aplikasi aktif kembali: ${backendState.apiBaseUrl}`, 'info', 'Backend Bawaan Aktif');
-            return;
-        }
-
-        showNotice('Aplikasi tetap di mode lokal karena URL backend bawaan belum dikonfigurasi.', 'info', 'Mode Lokal Aktif');
     }
 
     function forceLocalBackendMode(showFeedback = true, customMessage = '', rejectedApiBaseUrl = '') {
         setRejectedBackendHint(rejectedApiBaseUrl);
         persistBackendOverride('');
-        persistForceLocalMode(true);
+        persistForceLocalMode(false);
         updateBackendState({
             overrideApiBaseUrl: '',
-            forceLocalMode: true
+            forceLocalMode: false
         });
         refreshBackendSetupPanel();
 
-        if (!showFeedback) {
-            return;
+        if (showFeedback) {
+            showNotice(customMessage || 'Mode lokal dimatikan. Aplikasi ini selalu memakai backend pusat.', 'info', 'Backend Pusat Aktif');
         }
-
-        showNotice(customMessage || 'Aplikasi sekarang memakai mode lokal/demo pada perangkat ini.', 'info', 'Mode Lokal Aktif');
     }
 
     function disableBrokenDefaultBackend(rejectedApiBaseUrl = backendState.defaultApiBaseUrl) {
@@ -2418,12 +2393,15 @@
     }
 
     function degradeUnavailableBackend(rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl) {
-        if (recoverFromBrokenBackendConfig(rejectedApiBaseUrl)) {
-            return true;
-        }
-
-        forceLocalBackendMode(false, '', rejectedApiBaseUrl);
-        return true;
+        setRejectedBackendHint(rejectedApiBaseUrl);
+        persistBackendOverride('');
+        persistForceLocalMode(false);
+        updateBackendState({
+            overrideApiBaseUrl: '',
+            forceLocalMode: false
+        });
+        refreshBackendSetupPanel();
+        return false;
     }
 
     function isRecoverableBackendFailure(error) {
@@ -2494,36 +2472,11 @@
     }
 
     async function saveBackendConfig() {
-        const input = document.getElementById('backend-url-input');
-        const rawValue = input?.value.trim() || '';
-
-        if (!rawValue) {
-            restoreConfiguredBackend();
-            return;
-        }
-
-        const normalizedApiBaseUrl = normalizeConfiguredApiBaseUrl(rawValue);
-
-        try {
-            await verifyBackendHealth(normalizedApiBaseUrl);
-            setRejectedBackendHint('');
-            persistBackendOverride(normalizedApiBaseUrl);
-            persistForceLocalMode(false);
-            updateBackendState({
-                overrideApiBaseUrl: normalizedApiBaseUrl,
-                forceLocalMode: false
-            });
-            refreshBackendSetupPanel();
-            showNotice('Backend berhasil dihubungkan. Sekarang login bisa memakai akun yang dibuat admin.', 'success', 'Backend Aktif');
-        } catch (error) {
-            setRejectedBackendHint(normalizedApiBaseUrl);
-            refreshBackendSetupPanel();
-            showNotice(error.message || 'URL backend belum bisa dijangkau dari perangkat ini.', 'warning', 'Cek Backend');
-        }
+        restoreConfiguredBackend(true);
     }
 
     function clearBackendOverride(showFeedback = true) {
-        forceLocalBackendMode(showFeedback);
+        restoreConfiguredBackend(showFeedback);
     }
 
     function buildBackendResponseError(status, payloadText, contentType) {
@@ -3367,18 +3320,8 @@
                 await verifyBackendHealth(backendState.apiBaseUrl);
                 setRejectedBackendHint('');
             } catch (error) {
-                if (isRecoverableBackendFailure(error)) {
-                    const rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl;
-                    degradeUnavailableBackend(rejectedApiBaseUrl);
-                    refreshBackendSetupPanel();
-                } else {
-                    console.warn('Pemeriksaan backend awal gagal.', error);
-                }
+                console.warn('Pemeriksaan backend awal gagal.', error);
             }
-        }
-
-        if (!isBackendEnabled() && isSyncConfigured()) {
-            await syncWithCloud();
         }
 
         refreshAllViews({ full: true });
@@ -3474,49 +3417,20 @@
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value;
         let loginResult = null;
-        let postLoginNotice = null;
 
         if (isBackendEnabled()) {
             try {
                 loginResult = await loginWithBackend(user, pass);
             } catch (error) {
-                const rejectedApiBaseUrl = backendState.overrideApiBaseUrl || backendState.apiBaseUrl;
-                const hadBackendOverride = Boolean(backendState.overrideApiBaseUrl);
-                const switchedToLocalMode = isRecoverableBackendFailure(error) && degradeUnavailableBackend(rejectedApiBaseUrl);
-
-                if (switchedToLocalMode) {
-                    const localDemoUser = getLocalDemoUser(user, pass);
-                    const recoveryMessage = hadBackendOverride
-                        ? 'Backend yang tersimpan di perangkat ini belum bisa dipakai, jadi aplikasi dipindahkan ke mode aman. Periksa URL backend atau server lalu coba lagi.'
-                        : 'Backend aplikasi belum bisa dipakai, jadi aplikasi dipindahkan ke mode lokal di perangkat ini. Isi URL backend yang benar jika ingin kembali ke server pusat.';
-
-                    if (!localDemoUser) {
-                        showNotice(recoveryMessage, 'warning', 'Backend Perlu Diatur');
-                        return;
-                    }
-
-                    currentUser = localDemoUser;
-                    postLoginNotice = {
-                        message: hadBackendOverride
-                            ? 'Backend yang tersimpan tadi otomatis dilepas agar aplikasi tidak terkunci. Jika ingin kembali ke server pusat, isi URL backend API yang benar di panel login.'
-                            : 'Backend aplikasi belum siap dipakai, jadi mode lokal diaktifkan pada perangkat ini. Jika ingin kembali ke server pusat, isi URL backend yang benar di panel login.',
-                        theme: 'warning',
-                        title: 'Backend Perlu Diatur'
-                    };
-                } else {
-                    showNotice(error.message || "Username atau password salah!", 'error', 'Login Gagal');
-                    return;
-                }
-            }
-        } else {
-            const localDemoUser = getLocalDemoUser(user, pass);
-
-            if (!localDemoUser) {
-                showNotice("Username atau password salah!", 'error', 'Login Gagal');
+                const message = isRecoverableBackendFailure(error)
+                    ? `${error.message || 'Backend pusat belum bisa dihubungi.'} Silakan coba lagi atau hubungi WA 085126019233 / IG @hfziltzm.`
+                    : (error.message || 'Username atau password salah!');
+                showNotice(message, 'error', isRecoverableBackendFailure(error) ? 'Backend Bermasalah' : 'Login Gagal');
                 return;
             }
-
-            currentUser = localDemoUser;
+        } else {
+            showNotice('Aplikasi ini wajib tersambung ke backend pusat sebelum login.', 'error', 'Backend Wajib Aktif');
+            return;
         }
 
         securityReloginPendingNotice = false;
@@ -3535,8 +3449,6 @@
             showNotice('Data lokal lama berhasil dipindahkan ke backend dan sekarang menjadi sumber data utama.', 'success', 'Backend Siap');
         } else if (loginResult?.seedWarning) {
             showNotice(loginResult.seedWarning, 'warning', 'Perlu Cek Data');
-        } else if (postLoginNotice) {
-            showNotice(postLoginNotice.message, postLoginNotice.theme, postLoginNotice.title);
         }
 
         if (!isBackendEnabled()) {

@@ -10,7 +10,7 @@ COPY . .
 ENV NODE_ENV=production
 ENV PORT=8787
 ENV DATA_FILE=/data/app.db
-ENV DAPOERMUDA_API_BASE_URL=same-origin
+ENV DAPOERMUDA_API_BASE_URL=https://dapoermuda-production.up.railway.app
 
 RUN node scripts/write-app-config.mjs && node scripts/sync-web.mjs
 
